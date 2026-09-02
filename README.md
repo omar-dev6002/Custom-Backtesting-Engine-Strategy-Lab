@@ -1,6 +1,3 @@
-# Custom-Backtesting-Engine-Strategy-Lab
-
-
 # Custom Backtesting Engine & Strategy Lab
 
 A backtesting engine built from scratch in Python — no `backtrader`, no `zipline`, no `bt`. The point isn't to reinvent those libraries, it's to actually understand what a backtester is doing under the hood: order execution, position tracking, and (eventually) the risk metrics everyone quotes without knowing how they're computed.
