@@ -6,11 +6,15 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Early. Data layer is done. Order/Broker/Portfolio classes (the actual engine) are next.
+In progress. Data layer done. Order and Portfolio classes implemented. Broker (the piece that actually executes trades) is next.
 
 ## What's built so far
 
 - **`engine/data_loader.py`** — pulls daily OHLCV data via `yfinance`, caches it locally as CSV so I'm not hitting the API on every run. Handles the MultiIndex column format yfinance returns by default (flattens it to plain `Close/High/Low/Open/Volume` columns).
+- **`engine/order.py`** — represents a single trade instruction (ticker, quantity, side, date). A `dataclass` with validation in `__post_init__` — rejects bad sides (must be `BUY`/`SELL`) and non-positive quantities immediately instead of letting the bug surface downstream.
+- **`engine/portfolio.py`** — tracks cash, current holdings (a `{ticker: shares}` dict), and a full trade log. `update_on_fill()` is called by the Broker after every trade to update cash and positions. `total_value()` computes cash + market value of holdings — this is what the equity curve (Week 3) will plot over time.
+
+Hit a real bug building this: a type-hint typo (`starting_cash, float` instead of `starting_cash: float`) silently created two parameters instead of one, and a stray `from matplotlib import ticker` autocomplete import masked a misspelled loop variable (`tiker`) that would've otherwise thrown a clear error. Both fixed — worth remembering that Python won't always catch a wrong-but-valid name.
 
 ## Tickers
 
@@ -31,13 +35,16 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 ## Known limitations (will grow as the project does)
 
-- No slippage or commission modeling yet — coming in Week 2
+- No Broker class yet — orders exist and portfolio state can update, but nothing connects a signal to an actual fill decision yet
+- No slippage or commission logic beyond a flat per-trade fee — coming as the Broker gets built out
 - Single-asset backtests only so far — no portfolio-level position sizing yet
 - Not handling lookahead bias or survivorship bias yet — these are common ways student backtests lie to themselves, and I'll be explicit about how (or whether) I've avoided them once the engine is further along
 
 ## Roadmap
 
 - **Week 1** (current): data layer + engine architecture (Order, Portfolio, Broker) + buy-and-hold baseline
-- **Week 2**: SMA/EMA crossover, RSI mean-reversion, momentum breakout strategies + transaction costs
-- **Week 3**: Sharpe, Sortino, max drawdown, CAGR from scratch + walk-forward validation
+  - Day 1 ✅ — env setup, repo structure, data loader with caching
+  - Day 2 (current) — Order class done, Portfolio class implemented, Broker up next
+- **Week 2**: SMA/EMA crossover, RSI mean-reversion, momentum strategies, commission/slippage modeling
+- **Week 3**: Sharpe, Sortino, max drawdown, CAGR from scratch, walk-forward validation
 - **Week 4**: comparison dashboard, packaging as a reusable module, write-up
