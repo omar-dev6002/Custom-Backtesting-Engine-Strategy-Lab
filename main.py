@@ -2,6 +2,7 @@ from engine.data_loader import get_multiple
 from engine.order import Order
 from datetime import datetime
 from engine.portfolio import Portfolio
+from engine.broker import Broker
 
 
 
@@ -42,5 +43,31 @@ print(f"After sell - cash: {portfolio.cash:.2f}, AAPL held: {portfolio.get_posit
 
 
 print(f"Trade log: {portfolio.trade_log}")
+
+
+
+portfolio2 = Portfolio(starting_cash = 1000)
+broker = Broker(portfolio = portfolio2, commission = 1.0)
+
+order1 = Order(ticker = "AAPL", quantity = 5, side = "BUY", date = datetime(2023, 1, 3))
+result1 = broker.execute(order1, fill_price = 125.07)
+print(f"Order 1 filled: {result1}, cash now: {portfolio2.cash:.2f}")
+
+
+order2 = Order(ticker = "AAPL", quantity = 10, side = "SELL", date = datetime(2023, 1, 4))
+result2 = broker.execute(order2, fill_price = 130.00)
+print(f"Order 2 filled: {result2}, cash now: {portfolio2.cash:.2f}")
+
+
+order3 = Order(ticker = "MSFT", quantity = 100, side = "BUY", date = datetime(2023, 1, 5))
+result3 = broker.execute(order3, fill_price = 300.00)
+print(f"Order 3 filled: {result3}, cash now: {portfolio2.cash:.2f}")
+
+
+
+
+
+
+
 
 
