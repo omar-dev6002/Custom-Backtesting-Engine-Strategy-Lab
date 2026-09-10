@@ -6,16 +6,28 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Core engine pieces (Order, Portfolio, Broker) are built and individually tested. Next: wiring them into an event loop and running a first end-to-end backtest.
+Week 1 complete. Full engine core built, tested, and producing a working backtest with a plotted equity curve. Week 2 (real strategies beyond buy-and-hold) is next.
+
+## Results so far
+
+Buy-and-hold, AAPL, 2023, $10,000 starting cash:
+
+![Equity curve](equity_curve.png)
+
+- Final value: **$15,453.07** (+54.5%)
+- 1 trade (the initial buy — buy-and-hold never sells)
+- The curve tracks AAPL's actual 2023 price action: steady climb into July, the August dip, recovery into September, a pullback into November, then a year-end rally. Not smoothed or fabricated — this is what actually happened.
 
 ## What's built so far
 
 - **`engine/data_loader.py`** — pulls daily OHLCV data via `yfinance`, caches it locally as CSV so I'm not hitting the API on every run. Handles the MultiIndex column format yfinance returns by default (flattens it to plain `Close/High/Low/Open/Volume` columns).
 - **`engine/order.py`** — represents a single trade instruction (ticker, quantity, side, date). A `dataclass` with validation in `__post_init__` — rejects bad sides (must be `BUY`/`SELL`) and non-positive quantities immediately instead of letting the bug surface downstream.
-- **`engine/portfolio.py`** — tracks cash, current holdings (a `{ticker: shares}` dict), and a full trade log. `update_on_fill()` is called by the Broker after every trade to update cash and positions. `total_value()` computes cash + market value of holdings — this is what the equity curve (Week 3) will plot over time. Tested against a hand-calculated buy/sell example (worked out on paper first, see `derivations.md`).
-- **`engine/broker.py`** — the middleman between Order and Portfolio. Takes an order and a fill price, checks whether it's actually possible (enough cash to buy, enough shares held to sell), and only then updates the Portfolio. Rejects invalid orders instead of silently going negative. Tested all three paths: successful fill, sell-rejected (insufficient shares), buy-rejected (insufficient cash).
+- **`engine/portfolio.py`** — tracks cash, current holdings (a `{ticker: shares}` dict), and a full trade log. `update_on_fill()` is called by the Broker after every trade. `total_value()` computes cash + market value of holdings, called every day of the backtest to build the equity curve.
+- **`engine/broker.py`** — the middleman between Order and Portfolio. Checks whether a trade is actually possible (enough cash to buy, enough shares to sell) before applying it. Rejects invalid orders instead of silently going negative.
+- **`engine/backtester.py`** — the event loop. Walks price data day by day, in order, asking the strategy for a decision using only that day's price (no lookahead into future data), routing any resulting order through the Broker, and recording portfolio value every day.
+- **`strategies/buy_and_hold.py`** — first strategy: buys as many whole shares as affordable on day one, then holds. Deliberately simple — it's the baseline every more complex strategy in Week 2 needs to actually beat, not just match.
 
-Bugs hit and fixed along the way: a type-hint typo (`starting_cash, float` instead of `starting_cash: float`) silently created two parameters instead of one; a stray `from matplotlib import ticker` autocomplete import masked a misspelled loop variable (`tiker`); and a file that saved as 0 bytes in VS Code, which threw a confusing `ImportError` before we traced it back to an unsaved file.
+Bugs hit and fixed along the way: a type-hint typo (`starting_cash, float` instead of `starting_cash: float`); a stray `from matplotlib import ticker` autocomplete import masking a misspelled loop variable; a file that silently saved as 0 bytes in VS Code; a mistyped keyword argument (`curent_prices`); and a dict key naming mismatch between where the equity curve was built and where it was read. All of these were caught by actually running the code and checking the numbers against hand calculations, not by assuming it worked.
 
 ## Tickers
 
@@ -32,7 +44,7 @@ python main.py
 
 ## Notes and derivations
 
-`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations) paired with typed explanations, day by day. Working things out on paper before coding them has been the main way I'm avoiding just pattern-matching syntax without understanding what it represents financially.
+`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, the event loop design) paired with typed explanations, day by day. Working things out on paper before coding them has been the main way I'm avoiding just pattern-matching syntax without understanding what it represents financially.
 
 ## Why build the engine instead of using a library
 
@@ -40,20 +52,15 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 ## Known limitations (will grow as the project does)
 
-- No event loop yet — Order, Portfolio, and Broker all work individually but nothing yet runs a full day-by-day simulation
 - No slippage modeling, only a flat per-trade commission
 - Single-asset backtests only so far — no portfolio-level position sizing yet
-- Not handling lookahead bias or survivorship bias yet — these are common ways student backtests lie to themselves, and I'll be explicit about how (or whether) I've avoided them once the engine is further along
+- Only one strategy exists (buy-and-hold) — nothing to actually compare it against yet
+- The event loop is *designed* to avoid lookahead bias by only exposing the current day's price to the strategy, but I haven't written a test that actively tries to break this
+- No risk-adjusted metrics yet (Sharpe, drawdown, etc.) — right now "did it work" just means "did the number go up," which isn't the full picture
 
 ## Roadmap
 
-- **Week 1** (current): data layer + engine architecture (Order, Portfolio, Broker) + buy-and-hold baseline
-  - Day 1 ✅ — env setup, repo structure, data loader with caching
-  - Day 2 ✅ — Order class built and tested, Portfolio class built and tested
-  - Day 3 ✅ — Broker class built and tested (fills + rejections)
-  - Day 4 — wire Order → Broker → Portfolio into an event loop
-  - Day 5 — buy-and-hold baseline strategy, first working end-to-end backtest + equity curve
-  - Day 6 — buffer/debug day, Week 1 wrap-up
+- **Week 1** ✅ complete — data layer, Order/Portfolio/Broker, event loop, buy-and-hold baseline, equity curve
 - **Week 2**: SMA/EMA crossover, RSI mean-reversion, momentum strategies, commission/slippage modeling
 - **Week 3**: Sharpe, Sortino, max drawdown, CAGR from scratch, walk-forward validation
 - **Week 4**: comparison dashboard, packaging as a reusable module, write-up
