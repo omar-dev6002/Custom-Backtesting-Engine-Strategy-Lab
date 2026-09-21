@@ -6,7 +6,7 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 1 complete (engine core, buy-and-hold baseline). Week 2 in progress: first real strategy (SMA crossover) built and compared against the baseline.
+Week 1 complete (engine core, buy-and-hold baseline). Week 2 in progress: two real strategies (SMA crossover, RSI mean-reversion) built, both compared against the baseline.
 
 ## Results so far
 
@@ -16,16 +16,17 @@ All results: AAPL, 2023, $10,000 starting cash.
 |---|---|---|---|
 | Buy & Hold | $15,453.07 | +54.5% | 1 |
 | SMA Crossover (20/50) | $12,219.04 | +22.2% | 8 |
+| RSI Mean-Reversion (14, 30/70) | $11,180.46 | +11.8% | 4 |
 
 ![Equity curve](equity_curve.png)
 
-**SMA crossover underperformed buy-and-hold, and that result is being kept, not hidden.** A few likely reasons, worth investigating further rather than dismissing:
+**Both active strategies underperformed buy-and-hold, and both results are being kept, not hidden or parameter-tuned away.** A pattern emerging across both:
 
-- 8 trades means ~4 round-trips, each paying commission twice — that's real drag on returns that buy-and-hold never incurs.
-- Moving averages are lagging indicators by construction — they confirm a trend only after it's partly over, so entries and exits both happen a bit late.
-- 2023 was a fairly persistent uptrend year for AAPL. That's close to the worst-case scenario for a trend-following strategy that keeps entering and exiting — "just hold and don't touch it" tends to win when the underlying trend doesn't reverse much.
+- 2023 was a fairly persistent uptrend year for AAPL. Buy-and-hold, by construction, can't be whipsawed or miss a rally waiting for a signal — it just holds through everything.
+- SMA crossover pays commission on every round-trip (8 trades = ~4 round-trips) and reacts to trend changes late (moving averages lag by construction).
+- RSI mean-reversion bets *against* the trend — it assumes an "overbought" reading means a pullback is coming, but in a genuine sustained uptrend, price can stay "overbought" for a long stretch while continuing to climb. Only 4 trades fired, suggesting the strategy mostly sat out or got timing wrong.
 
-Next step on this: test different SMA windows and a choppier/sideways period to see if the strategy performs better where it's theoretically supposed to.
+This is a fair testable hypothesis, not yet a conclusion: **one ticker, one year, one market regime isn't enough data to say these strategies "don't work"** — only that they didn't work under these specific conditions. Testing across a choppier/sideways period and other tickers is a planned next step, once there's a full lineup of strategies to compare properly.
 
 ## What's built so far
 
@@ -33,11 +34,12 @@ Next step on this: test different SMA windows and a choppier/sideways period to 
 - **`engine/order.py`** — validated trade instruction (dataclass).
 - **`engine/portfolio.py`** — cash, positions, trade log, and total value tracking.
 - **`engine/broker.py`** — validates and executes orders against the portfolio, rejecting infeasible trades.
-- **`engine/backtester.py`** — the event loop. Takes an optional `prepare_fn` to add indicator columns (e.g. moving averages) to the price data before the loop starts — safe from lookahead bias since `pandas.rolling()` only ever looks backward from each row. Strategies receive the full day's `row` (price + any indicators), not just a bare price.
-- **`strategies/buy_and_hold.py`** — baseline strategy. Buys max affordable shares once, holds. Checks the portfolio directly for current position rather than tracking a separate flag.
-- **`strategies/sma_crossover.py`** — buys when a fast moving average crosses above a slow one (uptrend signal), sells when it crosses back below. Crossover points are precomputed vectorized with pandas rather than detected inside the loop.
+- **`engine/backtester.py`** — the event loop. Takes an optional `prepare_fn` to add indicator columns to the price data before the loop starts — safe from lookahead bias since `pandas.rolling()` only ever looks backward from each row. Strategies receive the full day's `row` (price + any indicators), not just a bare price.
+- **`strategies/buy_and_hold.py`** — baseline strategy. Buys max affordable shares once, holds.
+- **`strategies/sma_crossover.py`** — trend-following. Buys when a fast moving average crosses above a slow one, sells on the reverse crossover.
+- **`strategies/rsi_strategy.py`** — mean-reversion. Buys when RSI drops below 30 (oversold), sells when RSI rises above 70 (overbought). Uses a simple rolling-average RSI, not the exponentially-smoothed "Wilder's RSI" most trading platforms show — a known simplification worth revisiting later.
 
-Bugs hit and fixed: multiple typos across sessions (`curent_prices`, `perpare`, a missing `df` prefix that silently created a 1-item list instead of a column reference and threw a length-mismatch error), a stray autocomplete import that masked a misspelled loop variable, a 0-byte unsaved file, and a dict key naming mismatch. All caught by actually running the code and checking against expected numbers, not by assuming it worked.
+Bugs hit and fixed: multiple typos across sessions (`curent_prices`, `perpare`, a missing `df` prefix that silently created a 1-item list instead of a column reference), a stray autocomplete import that masked a misspelled loop variable, a 0-byte unsaved file, and a dict key naming mismatch. All caught by actually running the code and checking against expected/hand-calculated numbers.
 
 ## Tickers
 
@@ -54,7 +56,7 @@ python main.py
 
 ## Notes and derivations
 
-`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design) paired with typed explanations, day by day.
+`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, the RSI formula worked by hand) paired with typed explanations, day by day.
 
 ## Why build the engine instead of using a library
 
@@ -64,15 +66,17 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 - No slippage modeling, only a flat per-trade commission
 - Single-asset backtests only so far — no portfolio-level position sizing
-- Only tested on one ticker, one year, one market regime (a strong uptrend) — not enough to draw real conclusions about either strategy yet
-- No risk-adjusted metrics yet (Sharpe, drawdown) — comparisons so far are just "final dollar value," which is a weak way to judge a strategy on its own
+- Only tested on one ticker, one year, one market regime (a strong uptrend) — the underperformance of both active strategies is a hypothesis about that regime, not a general conclusion
+- No risk-adjusted metrics yet (Sharpe, drawdown) — comparisons so far are just "final dollar value," which doesn't account for how much risk was taken to get there
+- RSI here uses simple rolling averages, not Wilder's exponential smoothing
 - The event loop is *designed* to avoid lookahead bias by only exposing past-and-current data to the strategy, but I haven't written an active test that tries to break this
 
 ## Roadmap
 
 - **Week 1** ✅ complete — data layer, Order/Portfolio/Broker, event loop, buy-and-hold baseline, equity curve
 - **Week 2** (current):
-  - Day 6 ✅ — refactored strategy interface to support indicators, built and tested SMA crossover, documented underperformance vs. buy-and-hold
-  - Remaining: RSI mean-reversion, momentum breakout, transaction cost/slippage modeling, position sizing
+  - Day 6 ✅ — refactored strategy interface to support indicators, built SMA crossover
+  - Day 7 ✅ — built RSI mean-reversion, both active strategies underperforming baseline (documented, not hidden)
+  - Remaining: momentum breakout, transaction cost/slippage modeling, position sizing, revisit why active strategies are losing to buy-and-hold
 - **Week 3**: Sharpe, Sortino, max drawdown, CAGR from scratch, walk-forward validation
 - **Week 4**: comparison dashboard, packaging as a reusable module, write-up
