@@ -6,7 +6,7 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 1 complete (engine core, buy-and-hold baseline). Week 2 in progress: two real strategies (SMA crossover, RSI mean-reversion) built, both compared against the baseline.
+Week 1 complete. Week 2: 3 active strategies now built (SMA crossover, RSI mean-reversion, momentum breakout) alongside the buy-and-hold baseline. Transaction cost modeling and position sizing remaining for Week 2.
 
 ## Results so far
 
@@ -17,16 +17,17 @@ All results: AAPL, 2023, $10,000 starting cash.
 | Buy & Hold | $15,453.07 | +54.5% | 1 |
 | SMA Crossover (20/50) | $12,219.04 | +22.2% | 8 |
 | RSI Mean-Reversion (14, 30/70) | $11,180.46 | +11.8% | 4 |
+| Momentum Breakout (20-day) | $10,925.85 | +9.3% | 7 |
 
 ![Equity curve](equity_curve.png)
 
-**Both active strategies underperformed buy-and-hold, and both results are being kept, not hidden or parameter-tuned away.** A pattern emerging across both:
+**Every active strategy underperformed buy-and-hold, and this is documented honestly, not tuned away.** This is a specific, understandable result, not a general verdict on active trading:
 
-- 2023 was a fairly persistent uptrend year for AAPL. Buy-and-hold, by construction, can't be whipsawed or miss a rally waiting for a signal — it just holds through everything.
-- SMA crossover pays commission on every round-trip (8 trades = ~4 round-trips) and reacts to trend changes late (moving averages lag by construction).
-- RSI mean-reversion bets *against* the trend — it assumes an "overbought" reading means a pullback is coming, but in a genuine sustained uptrend, price can stay "overbought" for a long stretch while continuing to climb. Only 4 trades fired, suggesting the strategy mostly sat out or got timing wrong.
+- 2023 AAPL was a strong, fairly persistent uptrend with relatively few deep pullbacks — close to the best-case scenario for buy-and-hold and the worst-case scenario for strategies that enter and exit.
+- Every active strategy pays commission on every round-trip trade, which buy-and-hold structurally avoids by only trading once.
+- Each strategy risks being *out* of the market during part of the rally — buy-and-hold can't miss any of it, by construction.
 
-This is a fair testable hypothesis, not yet a conclusion: **one ticker, one year, one market regime isn't enough data to say these strategies "don't work"** — only that they didn't work under these specific conditions. Testing across a choppier/sideways period and other tickers is a planned next step, once there's a full lineup of strategies to compare properly.
+**What this result does NOT yet show:** whether these strategies took on less risk to get their (lower) returns. "Final dollar value" alone is a weak metric — Week 3 adds Sharpe ratio and max drawdown, which will give a fairer, risk-adjusted comparison. It's entirely possible an active strategy that "lost" on raw return looks more attractive once volatility and drawdown are accounted for. Testing across a choppier/sideways period and other tickers is also planned, since one ticker/one year/one uptrend regime isn't enough to generalize from.
 
 ## What's built so far
 
@@ -34,12 +35,13 @@ This is a fair testable hypothesis, not yet a conclusion: **one ticker, one year
 - **`engine/order.py`** — validated trade instruction (dataclass).
 - **`engine/portfolio.py`** — cash, positions, trade log, and total value tracking.
 - **`engine/broker.py`** — validates and executes orders against the portfolio, rejecting infeasible trades.
-- **`engine/backtester.py`** — the event loop. Takes an optional `prepare_fn` to add indicator columns to the price data before the loop starts — safe from lookahead bias since `pandas.rolling()` only ever looks backward from each row. Strategies receive the full day's `row` (price + any indicators), not just a bare price.
-- **`strategies/buy_and_hold.py`** — baseline strategy. Buys max affordable shares once, holds.
-- **`strategies/sma_crossover.py`** — trend-following. Buys when a fast moving average crosses above a slow one, sells on the reverse crossover.
-- **`strategies/rsi_strategy.py`** — mean-reversion. Buys when RSI drops below 30 (oversold), sells when RSI rises above 70 (overbought). Uses a simple rolling-average RSI, not the exponentially-smoothed "Wilder's RSI" most trading platforms show — a known simplification worth revisiting later.
+- **`engine/backtester.py`** — the event loop, with a `prepare_fn` hook for precomputing indicator columns (lookahead-safe via `pandas.rolling()`).
+- **`strategies/buy_and_hold.py`** — baseline. Buys once, holds.
+- **`strategies/sma_crossover.py`** — trend-following. Buy/sell on moving-average crossovers.
+- **`strategies/rsi_strategy.py`** — mean-reversion. Buy oversold (RSI<30), sell overbought (RSI>70).
+- **`strategies/momentum_breakout.py`** — buys when price breaks above its N-day high, sells below its N-day low. Uses `.shift(1)` before the rolling max/min so today's price is compared against the *prior* N days only — without this, a breakout above a window that includes today's own price is mathematically impossible to detect.
 
-Bugs hit and fixed: multiple typos across sessions (`curent_prices`, `perpare`, a missing `df` prefix that silently created a 1-item list instead of a column reference), a stray autocomplete import that masked a misspelled loop variable, a 0-byte unsaved file, and a dict key naming mismatch. All caught by actually running the code and checking against expected/hand-calculated numbers.
+Bugs hit and fixed across sessions: multiple typos (`curent_prices`, `perpare`, a missing `df` prefix), a stray autocomplete import masking a misspelled loop variable, a 0-byte unsaved file, a dict key naming mismatch. All caught by running the code and checking against expected/hand-calculated numbers, not assumed to work.
 
 ## Tickers
 
@@ -56,7 +58,7 @@ python main.py
 
 ## Notes and derivations
 
-`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, the RSI formula worked by hand) paired with typed explanations, day by day.
+`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, the RSI formula worked by hand, the breakout `.shift(1)` reasoning) paired with typed explanations, day by day.
 
 ## Why build the engine instead of using a library
 
@@ -66,8 +68,8 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 - No slippage modeling, only a flat per-trade commission
 - Single-asset backtests only so far — no portfolio-level position sizing
-- Only tested on one ticker, one year, one market regime (a strong uptrend) — the underperformance of both active strategies is a hypothesis about that regime, not a general conclusion
-- No risk-adjusted metrics yet (Sharpe, drawdown) — comparisons so far are just "final dollar value," which doesn't account for how much risk was taken to get there
+- Only tested on one ticker, one year, one market regime (a strong uptrend) — the underperformance of all 3 active strategies is a hypothesis about that regime, not a general conclusion
+- No risk-adjusted metrics yet (Sharpe, drawdown) — this is the biggest open gap in the current comparison, since "final value" ignores how much risk each strategy took on
 - RSI here uses simple rolling averages, not Wilder's exponential smoothing
 - The event loop is *designed* to avoid lookahead bias by only exposing past-and-current data to the strategy, but I haven't written an active test that tries to break this
 
@@ -75,8 +77,9 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 - **Week 1** ✅ complete — data layer, Order/Portfolio/Broker, event loop, buy-and-hold baseline, equity curve
 - **Week 2** (current):
-  - Day 6 ✅ — refactored strategy interface to support indicators, built SMA crossover
-  - Day 7 ✅ — built RSI mean-reversion, both active strategies underperforming baseline (documented, not hidden)
-  - Remaining: momentum breakout, transaction cost/slippage modeling, position sizing, revisit why active strategies are losing to buy-and-hold
+  - Day 6 ✅ — refactored strategy interface, built SMA crossover
+  - Day 7 ✅ — built RSI mean-reversion
+  - Day 8 ✅ — built momentum breakout, all 4 strategies now comparable, all active strategies underperform baseline
+  - Remaining: transaction cost/slippage modeling, position sizing
 - **Week 3**: Sharpe, Sortino, max drawdown, CAGR from scratch, walk-forward validation
 - **Week 4**: comparison dashboard, packaging as a reusable module, write-up
