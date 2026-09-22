@@ -9,21 +9,26 @@ just buying and holding, the added complexity isn't worth it.
 
 from engine.order import Order 
 
-def generate_signal(date, price: float, ticker: str, portfolio, has_bought: bool):
+def generate_signal(date, row, ticker: str, portfolio):
     """
         Returns an Order, or None if no action this day.
-        `has_bought` tracks whether we've already made our one purchase -
-        the event loop passes this in and updates it based on our return value.
+        Checks the portfolio directly to see if we already hold a position,
+        instead of tracking a separate flag - the portfolio is the single
+        source of truth for what we own.
     """
+    if portfolio.get_positions(ticker) > 0:
+        return None  # already bought, do nothing
 
-    if has_bought:
-        return None
+    price = row['Close']
 
-    # buy as many whole shares as affordable, leaving $1 headroom for commission
-    affordable_shares = int((portfolio.cash -1.0) // price)
+    affordable_shares = int((portfolio.cash - 1.0 ) // price)
 
     if affordable_shares <= 0:
         return None
 
     return Order(ticker = ticker, quantity = affordable_shares, side = "BUY", date = date)
 
+'''
+has_bought parameter is gone, replaced by directly checking
+portfolio.get_positions(ticker) > 0. 
+'''
