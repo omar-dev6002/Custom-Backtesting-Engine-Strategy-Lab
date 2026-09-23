@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     # BL
     bh_curve, bh_portfolio = run_backtest(
-        price_data= price_data, ticker= TICKER, strategy_fn= generate_signal, starting_cash= 10000, commission= 1.0,
+        price_data= price_data, ticker= TICKER, strategy_fn= generate_signal, starting_cash= 10000, commission= 1.0, slippage_pct=0.001,
     )
 
     print(f"BUY & HOLD final value: ${bh_curve[-1]['Total Value']:.2f} ({len(bh_portfolio.trade_log)} trades)")
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # SMA
     sma_curve, sma_portfolio = run_backtest(
-        price_data= price_data, ticker= TICKER, strategy_fn= sma_crossover.generate_signal, prepare_fn= sma_crossover.prepare, starting_cash = 10000, commission= 1.0,
+        price_data= price_data, ticker= TICKER, strategy_fn= sma_crossover.generate_signal, prepare_fn= sma_crossover.prepare, starting_cash = 10000, commission= 1.0, slippage_pct=0.001,
     )
 
     print(f"SMA Crossover final value: ${sma_curve[-1]['Total Value']:.2f} ({len(sma_portfolio.trade_log)} trades)")
@@ -36,14 +36,14 @@ if __name__ == "__main__":
 
     # RSI 
     rsi_curve, rsi_portfolio = run_backtest(
-        price_data= price_data, ticker= TICKER, strategy_fn= rsi_strategy.generate_signal, prepare_fn= rsi_strategy.prepare, starting_cash = 10000, commission= 1.0,
+        price_data= price_data, ticker= TICKER, strategy_fn= rsi_strategy.generate_signal, prepare_fn= rsi_strategy.prepare, starting_cash = 10000, commission= 1.0, slippage_pct=0.001,
     )
 
     print(f"RSI Mean-Reversion final value: ${rsi_curve[-1]['Total Value']:.2f} ({len(rsi_portfolio.trade_log)} trades)")
 
 
     mom_curve, mom_portfolio = run_backtest(
-        price_data= price_data, ticker= TICKER, strategy_fn= momentum_breakout.generate_signal, prepare_fn= momentum_breakout.prepare, starting_cash = 10000, commission= 1.0,
+        price_data= price_data, ticker= TICKER, strategy_fn= momentum_breakout.generate_signal, prepare_fn= momentum_breakout.prepare, starting_cash = 10000, commission= 1.0, slippage_pct=0.001,
     )
 
     print(f"Momentum Breakout final value: ${mom_curve[-1]['Total Value']:.2f} ({len(mom_portfolio.trade_log)} trades)")

@@ -17,7 +17,7 @@ from engine.portfolio import Portfolio
 from engine.broker import Broker
 
 
-def run_backtest(price_data: pd.DataFrame, ticker : str, strategy_fn, prepare_fn = None ,starting_cash: float = 10000, commission: float = 1.0):
+def run_backtest(price_data: pd.DataFrame, ticker : str, strategy_fn, prepare_fn = None ,starting_cash: float = 10000, commission: float = 1.0, slippage_pct: float = 0.0):
     """
         price_data: DataFrame with a 'Close' column, indexed by date.
         strategy_fn: function(date, price, ticker, portfolio, has_bought) -> Order or None
@@ -31,7 +31,7 @@ def run_backtest(price_data: pd.DataFrame, ticker : str, strategy_fn, prepare_fn
         price_data = prepare_fn(price_data)
 
     portfolio = Portfolio(starting_cash = starting_cash)
-    broker = Broker(portfolio = portfolio, commission = commission)
+    broker = Broker(portfolio = portfolio, commission = commission, slippage_pct= slippage_pct)
 
     equity_curve = []
     
@@ -42,7 +42,7 @@ def run_backtest(price_data: pd.DataFrame, ticker : str, strategy_fn, prepare_fn
         order  = strategy_fn(date, row, ticker, portfolio)
 
         if order is not None:
-            broker.execute(order, fill_price = price)
+            broker.execute(order, quoted_price = price)
 
         total_value = portfolio.total_value(current_prices = {ticker: price})
         equity_curve.append({"Date": date, "Total Value": total_value})
