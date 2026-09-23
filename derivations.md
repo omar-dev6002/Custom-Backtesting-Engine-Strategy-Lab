@@ -161,3 +161,41 @@ RSI ≈ 81.82 is above the 70 "overbought" threshold → there were more gains (
 This maps directly to `strategies/rsi_strategy.py`: `avg_gain`/`avg_loss` are the AG/AL from this table, computed with `.rolling(period).mean()` instead of by hand, and `Buy_Signal`/`Sell_Signal` implement the 30/70 threshold rule above.
 
 
+
+## Day 8 — Momentum breakout
+
+![Day 8 notes part 1](notes/day8_1_momentum_concept.jpg)
+
+**Core idea:**
+1. Looks for stocks pushing to new extremes and bets that breaking out of a recent range signals the start of a genuinely new move.
+2. Track the highest closing price (Close) over the last N days (a "rolling high"). If today's close breaks above that rolling high, it means price just did something it hasn't done in the last N days — that's the breakout signal to buy.
+3. Symmetrically, if price breaks below the rolling N-day low, that's a breakdown signal to exit.
+4. This strategy is sharper and more immediate than SMA crossover. This makes it react faster, but also prone to false breakouts (price changes for a day or two only).
+
+**Example:**
+
+| Day | Price |
+|---|---|
+| 1 | 100 |
+| 2 | 102 |
+| 3 | 99 |
+| 4 | 103 |
+| 5 | 101 |
+| 6 | 104 |
+| 7 | 102 |
+| 8 | 105 |
+| 9 | 110 |
+
+![Day 8 notes part 2](notes/day8_2_shift_fix.jpg)
+
+The 5-day rolling high as of Day 8 looks at Days 4–8: (103, 101, 104, 102, 105) → highest = 105.
+
+Day 9's close is 110, which is above 105 → breakout signal: buy.
+
+We didn't use Days (5–9), only Days (4–8). If we included Day 9 for the "5-day high as of Day 9," it would already include 110 — meaning it would just equal 110, and price could technically never be "above" a high that includes itself.
+
+Then, using `.rolling(5).max()` will fail, as by default it includes the current row in its own window, so comparing today's price to today's own rolling max would (at best) always be a tie, never a genuine breakout.
+
+**Fix:** we need to compare today's price against the rolling high of the previous N days only — shifting the rolling calculation back by one day. Same as `.shift(1)` in SMA crossover, just applied to rolling min/max instead of rolling mean.
+
+This maps directly to `strategies/momentum_breakout.py`: `df["Close"].shift(1).rolling(window).max()` implements exactly this fix.
