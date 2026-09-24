@@ -199,3 +199,31 @@ Then, using `.rolling(5).max()` will fail, as by default it includes the current
 **Fix:** we need to compare today's price against the rolling high of the previous N days only — shifting the rolling calculation back by one day. Same as `.shift(1)` in SMA crossover, just applied to rolling min/max instead of rolling mean.
 
 This maps directly to `strategies/momentum_breakout.py`: `df["Close"].shift(1).rolling(window).max()` implements exactly this fix.
+
+
+
+## Day 9 — Transaction costs (slippage)
+
+![Day 9 notes part 1](notes/day9_1_slippage_concept.jpg)
+
+We already have commission (a flat $1 fee per trade). We are missing slippage.
+
+**What is slippage?** In trading, the price we always see isn't the price we always get. Between deciding to trade and the order actually executing, the price can move — especially because our own order competes with other buyers/sellers. If we want to buy, we are usually buying more (slightly) than the last quoted price (other buyers are ahead of us, or the price ticks up as our order gets filled). If we are selling, we usually get slightly less. This gap is called slippage.
+
+**Simple example:** 0.1% slippage means: on a BUY, our actual fill price is 0.1% higher than the day's close; on a SELL, 0.1% lower. It is not perfectly realistic (real slippage depends on order size, liquidity, volatility), but easier for simplification.
+
+**Numbers:** buying 10 shares of a $200 stock, with 0.1% slippage.
+- Without slippage, total buying cost: $200 × 10 = $2,000.00
+- With 0.1% slippage, total cost: [$200 × (1 + 0.001)] × 10 = $2,002.00
+- We paid $2 more than the quoted price due to slippage.
+
+![Day 9 notes part 2](notes/day9_2_slippage_calc.jpg)
+
+Later, on selling the stocks (10 shares) at $210:
+- Without slippage: $2,100.00
+- With slippage: [$210 × (1 − 0.001)] × 10 = $2,097.90
+- We got $2.10 less than the quoted price.
+
+**Total slippage cost on this round trip:** $(2 + 2.10) = $4.10 — on top of whatever commissions are charged.
+
+This maps directly to `engine/broker.py`: `_apply_slippage()` implements exactly this — multiplying the quoted price by `(1 + slippage_pct)` on a BUY and `(1 - slippage_pct)` on a SELL.
