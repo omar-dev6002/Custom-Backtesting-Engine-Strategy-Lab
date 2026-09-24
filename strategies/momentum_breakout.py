@@ -9,7 +9,7 @@ against the PRIOR N days only - not a window that includes today,
 which would make a real breakout impossible to detect (today's price
 can't be "above" a high that already includes today's own value).
 """
-
+from engine.position_sizing import calculate_shares
 from engine.order import Order
 
 
@@ -40,7 +40,8 @@ def generate_signal(date, row, ticker: str, portfolio):
 
     if row["Buy_Signal"] and held == 0:
         price = row["Close"]
-        affordable_shares = int((portfolio.cash - 1.0) // price)
+        affordable_shares = calculate_shares(portfolio, price, position_size_pct= 0.25 )
+
         if affordable_shares <= 0:
             return None
         return Order(ticker= ticker, quantity= affordable_shares, side= "BUY", date= date)

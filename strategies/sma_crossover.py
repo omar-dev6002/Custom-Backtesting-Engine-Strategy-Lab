@@ -5,7 +5,7 @@ Buy when the fast average crosses above the slow one (uptrend starting),
 sell when it crosses back below (uptrend fading).
 """
 
-
+from engine.position_sizing import calculate_shares
 from engine.order import Order
 
 
@@ -39,7 +39,8 @@ def generate_signal(date, row, ticker: str, portfolio):
 
     if row['Cross_Up'] and held == 0:
         price = row['Close']
-        affordable_shares = int((portfolio.cash - 1.0) // price)
+        affordable_shares = calculate_shares(portfolio, price, position_size_pct= 0.25 )
+
         if affordable_shares <= 0:
             return None
         return Order(ticker= ticker, quantity= affordable_shares, side = "BUY",date = date )

@@ -6,7 +6,7 @@ other strategy should try to beat - if a fancier strategy can't outperform
 just buying and holding, the added complexity isn't worth it.
 """
 
-
+from engine.position_sizing import calculate_shares
 from engine.order import Order 
 
 def generate_signal(date, row, ticker: str, portfolio):
@@ -21,7 +21,7 @@ def generate_signal(date, row, ticker: str, portfolio):
 
     price = row['Close']
 
-    affordable_shares = int((portfolio.cash - 1.0 ) // price)
+    affordable_shares = calculate_shares(portfolio, price, position_size_pct= 0.25 )
 
     if affordable_shares <= 0:
         return None

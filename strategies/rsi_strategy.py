@@ -10,7 +10,7 @@ RSI (Wilder's RSI) uses an exponential smoothing instead, which behaves
 slightly differently. Worth knowing this is a simplification, not the
 only correct way to compute it.
 """
-
+from engine.position_sizing import calculate_shares
 from engine.order import Order
 
 
@@ -49,7 +49,8 @@ def generate_signal(date, row, ticker: str, portfolio):
 
     if row["Buy_Signal"] and held == 0:
         price = row["Close"]
-        affordable_shares = int((portfolio.cash - 1.0) // price)
+        affordable_shares = calculate_shares(portfolio, price, position_size_pct= 0.25 )
+
         if affordable_shares <= 0:
             return None
 
