@@ -6,40 +6,42 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 1 complete. Week 2: 3 active strategies now built (SMA crossover, RSI mean-reversion, momentum breakout) alongside the buy-and-hold baseline. Transaction cost modeling and position sizing remaining for Week 2.
+Week 1 complete. Week 2: 4 strategies built (buy-and-hold, SMA crossover, RSI mean-reversion, momentum breakout), commission + slippage modeling added. Position sizing remaining for Week 2.
 
 ## Results so far
 
-All results: AAPL, 2023, $10,000 starting cash.
+All results: AAPL, 2023, $10,000 starting cash, $1 commission per trade, 0.1% slippage per trade.
 
 | Strategy | Final Value | Return | Trades |
 |---|---|---|---|
-| Buy & Hold | $15,453.07 | +54.5% | 1 |
-| SMA Crossover (20/50) | $12,219.04 | +22.2% | 8 |
-| RSI Mean-Reversion (14, 30/70) | $11,180.46 | +11.8% | 4 |
-| Momentum Breakout (20-day) | $10,925.85 | +9.3% | 7 |
+| Buy & Hold | $15,443.12 | +54.4% | 1 |
+| SMA Crossover (20/50) | $12,128.45 | +21.3% | 8 |
+| RSI Mean-Reversion (14, 30/70) | $11,138.96 | +11.4% | 4 |
+| Momentum Breakout (20-day) | $10,849.52 | +8.5% | 7 |
 
 ![Equity curve](equity_curve.png)
 
-**Every active strategy underperformed buy-and-hold, and this is documented honestly, not tuned away.** This is a specific, understandable result, not a general verdict on active trading:
+**Every active strategy underperformed buy-and-hold, and the gap widened slightly once slippage was added** — the strategies that trade more (SMA: 8 trades, Momentum: 7 trades) lost more to slippage than the ones that trade less (Buy & Hold: 1 trade). Slippage costs scaled roughly proportionally with trade count (~$10 per trade regardless of strategy), confirming the model is working as intended, not just adding noise.
+
+This is a specific, understandable result about this market regime, not a general verdict on active trading:
 
 - 2023 AAPL was a strong, fairly persistent uptrend with relatively few deep pullbacks — close to the best-case scenario for buy-and-hold and the worst-case scenario for strategies that enter and exit.
-- Every active strategy pays commission on every round-trip trade, which buy-and-hold structurally avoids by only trading once.
-- Each strategy risks being *out* of the market during part of the rally — buy-and-hold can't miss any of it, by construction.
+- Every active strategy pays commission and slippage on every round-trip trade, both of which buy-and-hold largely avoids by only trading once.
+- Each active strategy risks being *out* of the market during part of the rally — buy-and-hold can't miss any of it, by construction.
 
-**What this result does NOT yet show:** whether these strategies took on less risk to get their (lower) returns. "Final dollar value" alone is a weak metric — Week 3 adds Sharpe ratio and max drawdown, which will give a fairer, risk-adjusted comparison. It's entirely possible an active strategy that "lost" on raw return looks more attractive once volatility and drawdown are accounted for. Testing across a choppier/sideways period and other tickers is also planned, since one ticker/one year/one uptrend regime isn't enough to generalize from.
+**What this result does NOT yet show:** whether these strategies took on less risk to get their (lower) returns. Week 3's risk-adjusted metrics (Sharpe ratio, max drawdown) will give a fairer comparison than raw final value. Testing across a choppier/sideways period and other tickers is also planned.
 
 ## What's built so far
 
 - **`engine/data_loader.py`** — pulls daily OHLCV data via `yfinance`, caches it locally as CSV.
 - **`engine/order.py`** — validated trade instruction (dataclass).
 - **`engine/portfolio.py`** — cash, positions, trade log, and total value tracking.
-- **`engine/broker.py`** — validates and executes orders against the portfolio, rejecting infeasible trades.
-- **`engine/backtester.py`** — the event loop, with a `prepare_fn` hook for precomputing indicator columns (lookahead-safe via `pandas.rolling()`).
+- **`engine/broker.py`** — validates and executes orders. Models slippage: the actual fill price is slightly worse than the quoted price (higher on a buy, lower on a sell), simulating the real cost of an order moving the price against you. Simple percentage-based model — not a full order-book simulation, but a standard, honest first-pass approximation.
+- **`engine/backtester.py`** — the event loop, with a `prepare_fn` hook for precomputing indicator columns (lookahead-safe via `pandas.rolling()`) and a `slippage_pct` parameter passed through to the Broker.
 - **`strategies/buy_and_hold.py`** — baseline. Buys once, holds.
 - **`strategies/sma_crossover.py`** — trend-following. Buy/sell on moving-average crossovers.
 - **`strategies/rsi_strategy.py`** — mean-reversion. Buy oversold (RSI<30), sell overbought (RSI>70).
-- **`strategies/momentum_breakout.py`** — buys when price breaks above its N-day high, sells below its N-day low. Uses `.shift(1)` before the rolling max/min so today's price is compared against the *prior* N days only — without this, a breakout above a window that includes today's own price is mathematically impossible to detect.
+- **`strategies/momentum_breakout.py`** — buys on breakout above N-day high, sells below N-day low. Uses `.shift(1)` to avoid comparing today's price to a window that includes itself.
 
 Bugs hit and fixed across sessions: multiple typos (`curent_prices`, `perpare`, a missing `df` prefix), a stray autocomplete import masking a misspelled loop variable, a 0-byte unsaved file, a dict key naming mismatch. All caught by running the code and checking against expected/hand-calculated numbers, not assumed to work.
 
@@ -58,7 +60,7 @@ python main.py
 
 ## Notes and derivations
 
-`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, the RSI formula worked by hand, the breakout `.shift(1)` reasoning) paired with typed explanations, day by day.
+`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, the RSI formula, the breakout `.shift(1)` reasoning, slippage cost math) paired with typed explanations, day by day.
 
 ## Why build the engine instead of using a library
 
@@ -66,10 +68,11 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 ## Known limitations (will grow as the project does)
 
-- No slippage modeling, only a flat per-trade commission
-- Single-asset backtests only so far — no portfolio-level position sizing
+- No position sizing yet — every strategy bets 100% of available cash on each trade, all-or-nothing
+- Slippage model is a flat percentage, not dependent on order size, liquidity, or volatility — a known simplification
+- Single-asset backtests only so far
 - Only tested on one ticker, one year, one market regime (a strong uptrend) — the underperformance of all 3 active strategies is a hypothesis about that regime, not a general conclusion
-- No risk-adjusted metrics yet (Sharpe, drawdown) — this is the biggest open gap in the current comparison, since "final value" ignores how much risk each strategy took on
+- No risk-adjusted metrics yet (Sharpe, drawdown) — this is the biggest open gap in the current comparison
 - RSI here uses simple rolling averages, not Wilder's exponential smoothing
 - The event loop is *designed* to avoid lookahead bias by only exposing past-and-current data to the strategy, but I haven't written an active test that tries to break this
 
@@ -79,7 +82,8 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 - **Week 2** (current):
   - Day 6 ✅ — refactored strategy interface, built SMA crossover
   - Day 7 ✅ — built RSI mean-reversion
-  - Day 8 ✅ — built momentum breakout, all 4 strategies now comparable, all active strategies underperform baseline
-  - Remaining: transaction cost/slippage modeling, position sizing
+  - Day 8 ✅ — built momentum breakout, all 4 strategies now comparable
+  - Day 9 ✅ — added slippage modeling to the Broker, confirmed cost scales with trade count
+  - Remaining: position sizing
 - **Week 3**: Sharpe, Sortino, max drawdown, CAGR from scratch, walk-forward validation
 - **Week 4**: comparison dashboard, packaging as a reusable module, write-up
