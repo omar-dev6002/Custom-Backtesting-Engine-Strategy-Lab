@@ -227,3 +227,44 @@ Later, on selling the stocks (10 shares) at $210:
 **Total slippage cost on this round trip:** $(2 + 2.10) = $4.10 — on top of whatever commissions are charged.
 
 This maps directly to `engine/broker.py`: `_apply_slippage()` implements exactly this — multiplying the quoted price by `(1 + slippage_pct)` on a BUY and `(1 - slippage_pct)` on a SELL.
+
+
+
+
+## Day 11 — Daily returns & CAGR
+
+![Day 11 notes part 1](notes/day11_1_daily_returns_cagr.jpg)
+
+**Daily returns:** how much the portfolio gained or lost each day, as a percentage.
+
+E.g. if our portfolio is worth $10,000 yesterday and $10,150 today, our return today was ($10,150 − $10,000)/$10,000 = 1.5%.
+
+We will do this for every consecutive day in our equity curve — we will get a full series of daily returns. This will become the raw material for every risk metric.
+
+**CAGR — Compound Annual Growth Rate:**
+1. It answers "what constant yearly growth rate would have produced this same total result?"
+2. This is the standard way to compare return across strategies or time periods that ran for different lengths of time. E.g. "I made 20%" means very different things over 3 months vs. 3 years.
+
+$$CAGR = \left(\frac{\text{Ending value}}{\text{Starting value}}\right)^{1/\text{years}} - 1$$
+
+E.g. using Buy & Hold result, starting $10,000, ending $11,343.23 (with position sizing), over exactly 1 year:
+
+$$CAGR = \left(\frac{11{,}343.23}{10{,}000}\right)^{1/1} - 1 = 0.13432 = 13.43\%$$
+
+![Day 11 notes part 2](notes/day11_2_cagr_derivation.jpg)
+
+Since this backtest happens to be exactly 1 year, CAGR here equals the simple return.
+
+The formula's real value shows up when comparing a 1-year backtest to a 3-year one — a strategy that made 30% over 3 years (CAGR = 9.1%/year) is actually worse annually than one that made 13.4% in one year.
+
+**Compounding formula** — if we grow by some rate `r` every year, for `n` years, compounding:
+
+$$\text{Final} = \text{Initial} \times (1+r)^n$$
+
+E.g. we have Final = $20,000 and Initial = $10,000 for 2 years. Then r = ?
+
+$$20{,}000 = 10{,}000 \times (1+r)^2 \implies r \approx 41.4\%$$
+
+That's exactly where CAGR's `1/year` comes from — for 2 years, we undo the squaring with the square root.
+
+This maps directly to `engine/metrics.py`: `to_returns_series()` implements the daily-return formula via `.pct_change()`, and `calculate_cagr()` implements this exact formula, with `years` computed from the actual date span of the equity curve.
