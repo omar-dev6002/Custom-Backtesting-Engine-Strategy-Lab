@@ -10,6 +10,8 @@ from strategies import sma_crossover
 from strategies import rsi_strategy
 from strategies import momentum_breakout
 
+from engine.metrics import calculate_cagr
+
 
 
 TICKER = "AAPL"
@@ -24,7 +26,7 @@ if __name__ == "__main__":
     )
 
     print(f"BUY & HOLD final value: ${bh_curve[-1]['Total Value']:.2f} ({len(bh_portfolio.trade_log)} trades)")
-
+    
 
     # SMA
     sma_curve, sma_portfolio = run_backtest(
@@ -47,6 +49,12 @@ if __name__ == "__main__":
     )
 
     print(f"Momentum Breakout final value: ${mom_curve[-1]['Total Value']:.2f} ({len(mom_portfolio.trade_log)} trades)")
+
+
+    print(f"\nBuy & Hold CAGR: {calculate_cagr(bh_curve) * 100:.2f}%")
+    print(f"SMA Crossover CAGR: {calculate_cagr(sma_curve) * 100:.2f}%")
+    print(f"RSI Mean-Reversion CAGR: {calculate_cagr(rsi_curve) * 100:.2f}%")
+    print(f"Momentum Breakout CAGR: {calculate_cagr(mom_curve) * 100:.2f}%")
 
 
     
