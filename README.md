@@ -6,30 +6,28 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 2 complete. Week 3 (risk-adjusted metrics) started: CAGR done, Sharpe/Sortino/max drawdown next.
+Week 2 complete. Week 3 in progress: CAGR and Sharpe ratio done, revealing a real nuance the earlier return-only comparison missed. Sortino, max drawdown, walk-forward validation remaining.
 
 ## Results so far
 
 All results: AAPL, 2023, $10,000 starting cash, $1 commission/trade, 0.1% slippage/trade, 25% position sizing.
 
-| Strategy | Final Value | Return | CAGR | Trades |
+| Strategy | Final Value | CAGR | Sharpe | Trades |
 |---|---|---|---|---|
-| Buy & Hold | $11,343.23 | +13.4% | 13.68% | 1 |
-| SMA Crossover (20/50) | $10,488.97 | +4.9% | 4.96% | 8 |
-| RSI Mean-Reversion (14, 30/70) | $10,263.94 | +2.6% | 2.68% | 4 |
-| Momentum Breakout (20-day) | $10,232.34 | +2.3% | 2.36% | 7 |
+| Buy & Hold | $11,343.23 | 13.68% | 2.13 | 1 |
+| SMA Crossover (20/50) | $10,488.97 | 4.96% | 2.03 | 8 |
+| RSI Mean-Reversion (14, 30/70) | $10,263.94 | 2.68% | 1.25 | 4 |
+| Momentum Breakout (20-day) | $10,232.34 | 2.36% | 0.56 | 7 |
 
 ![Equity curve](equity_curve.png)
 
-CAGR here is close to simple return since the backtest runs almost exactly 1 year — CAGR's real value is comparing strategies or backtests that ran for different lengths of time, which matters once testing expands beyond a single year.
+**Sharpe ratio reveals something the raw return comparison completely missed: SMA Crossover is nearly as risk-efficient as Buy & Hold, despite earning less than half the CAGR (4.96% vs 13.68%).** Sharpe of 2.03 vs. 2.13 is a small gap — meaning SMA achieved a smoother, lower-volatility path to its lower total return, roughly proportional to the risk it took on. This is a genuinely different conclusion than "SMA underperformed," which is what the Week 2 return-only comparison suggested.
 
-**Buy & Hold still leads on every metric so far, and this continues to be documented honestly rather than adjusted to look different.** Why, in this specific test:
+RSI (Sharpe 1.25) and Momentum (Sharpe 0.56) both still trail clearly, even risk-adjusted — Momentum in particular shows the weakest risk-adjusted efficiency of any strategy tested so far.
 
-- 2023 AAPL was a strong, fairly persistent uptrend with relatively few deep pullbacks — close to the best-case scenario for buy-and-hold and the worst-case scenario for strategies that enter and exit.
-- Every active strategy pays commission and slippage on every round-trip trade, both of which buy-and-hold largely avoids by only trading once.
-- Each active strategy risks being *out* of the market during part of the rally — buy-and-hold can't miss any of it, by construction.
+**Why this matters, and why it was worth waiting for:** "final dollar value" and even CAGR both ignore *how bumpy the ride was* to get there. Sharpe divides return by volatility, so two strategies with very different total returns can turn out to be similarly efficient once risk is accounted for. This is exactly the kind of result that gets lost if you only look at one metric — which is the whole reason this project builds multiple metrics rather than declaring a single "winner" number.
 
-**What this doesn't yet show:** whether the active strategies took on less risk for their lower returns. That's exactly what Sharpe ratio and max drawdown (next) are for — return alone, even annualized as CAGR, still isn't the full picture.
+Max drawdown (next) will add another angle: not just how volatile the ride was on average, but how bad the single worst dip actually got.
 
 ## What's built so far
 
@@ -39,10 +37,10 @@ CAGR here is close to simple return since the backtest runs almost exactly 1 yea
 - **`engine/broker.py`** — validates and executes orders, models slippage alongside a flat commission.
 - **`engine/backtester.py`** — the event loop, with a `prepare_fn` hook for indicators and a `slippage_pct` parameter.
 - **`engine/position_sizing.py`** — caps each trade to a fixed percentage of available cash.
-- **`engine/metrics.py`** — risk/return metrics computed from an equity curve. Currently has `to_returns_series()` (daily returns, the shared building block for every other metric) and `calculate_cagr()`.
+- **`engine/metrics.py`** — `to_return_series()` (daily returns, shared building block), `calculate_cagr()`, `calculate_sharpe()` (annualized, risk-free rate simplified to 0).
 - **`strategies/buy_and_hold.py`**, **`sma_crossover.py`**, **`rsi_strategy.py`**, **`momentum_breakout.py`** — 4 strategies, all using shared position sizing.
 
-Bugs hit and fixed across sessions: multiple typos, a stray autocomplete import masking a misspelled loop variable, a 0-byte unsaved file, a dict key naming mismatch. All caught by running the code and checking against expected/hand-calculated numbers, not assumed to work.
+Bugs hit and fixed across sessions: multiple typos, a missing `()` on `.pct_change` (calling the method reference itself instead of its result, causing an `AttributeError` two functions downstream), a stray autocomplete import, a 0-byte unsaved file, a dict key naming mismatch. All caught by running the code and checking against expected/hand-calculated numbers, not assumed to work.
 
 ## Tickers
 
@@ -59,7 +57,7 @@ python main.py
 
 ## Notes and derivations
 
-`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, RSI formula, breakout `.shift(1)` reasoning, slippage math, position sizing math, CAGR derivation) paired with typed explanations, day by day.
+`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, RSI formula, breakout `.shift(1)` reasoning, slippage math, position sizing math, CAGR derivation, Sharpe ratio calculation) paired with typed explanations, day by day.
 
 ## Why build the engine instead of using a library
 
@@ -67,7 +65,8 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 ## Known limitations (will grow as the project does)
 
-- No risk-adjusted metrics yet beyond CAGR — Sharpe ratio and max drawdown are next, and are needed before any real conclusion about active vs. passive can be drawn
+- No Sortino ratio or max drawdown yet — both add angles Sharpe alone doesn't capture (Sortino only penalizes downside volatility; drawdown captures the single worst dip, not just average bumpiness)
+- Sharpe's risk-free rate is simplified to 0, not a real T-bill rate
 - Position sizing is a fixed percentage of cash, not volatility-based
 - Slippage model is a flat percentage, not dependent on order size or liquidity
 - Single-asset backtests only so far
@@ -81,5 +80,6 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 - **Week 2** ✅ complete — SMA crossover, RSI mean-reversion, momentum breakout, slippage modeling, position sizing
 - **Week 3** (current):
   - Day 11 ✅ — daily returns, CAGR
-  - Remaining: Sharpe ratio, Sortino ratio, max drawdown, walk-forward validation
+  - Day 12 ✅ — Sharpe ratio, revealed SMA's risk-adjusted efficiency nearly matches Buy & Hold
+  - Remaining: Sortino ratio, max drawdown, walk-forward validation
 - **Week 4**: comparison dashboard, packaging as a reusable module, write-up
