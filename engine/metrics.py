@@ -5,7 +5,7 @@ the same equity_curve format produced by run_backtest() - a list of
 {"Date": ..., "Total Value": ...} dicts, one per day.
 """
 
-
+import numpy as np
 import pandas as pd
 
 
@@ -17,7 +17,7 @@ def to_return_series(equity_curve) -> pd.Series:
     """
 
     df = pd.DataFrame(equity_curve).set_index("Date")
-    daily_returns = df["Total Value"].pct_change
+    daily_returns = df["Total Value"].pct_change()
     return daily_returns.dropna()
 
 
@@ -41,4 +41,21 @@ def calculate_cagr(equity_curve) -> float:
 
     return (end_value / start_value) ** (1 / years) - 1
 
+
+def calculate_sharpe(equity_curve, risk_free_rate: float = 0.0) -> float:
+    """
+        Annualized Sharpe ratio: return earned per unit of risk (volatility)
+        taken, above the risk-free rate. risk_free_rate is a DAILY rate here
+        (defaults to 0 - a common simplification).
+    """
+
+    daily_returns = to_return_series(equity_curve)
+
+    if daily_returns.std() == 0 or len(daily_returns) < 2:
+        return 0.0
+
+    excess_returns = daily_returns - risk_free_rate
+    sharpe_daily = excess_returns.mean() / daily_returns.std()
+
+    return sharpe_daily * np.sqrt(252)
 

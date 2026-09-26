@@ -11,6 +11,7 @@ from strategies import rsi_strategy
 from strategies import momentum_breakout
 
 from engine.metrics import calculate_cagr
+from engine.metrics import calculate_sharpe
 
 
 
@@ -55,6 +56,11 @@ if __name__ == "__main__":
     print(f"SMA Crossover CAGR: {calculate_cagr(sma_curve) * 100:.2f}%")
     print(f"RSI Mean-Reversion CAGR: {calculate_cagr(rsi_curve) * 100:.2f}%")
     print(f"Momentum Breakout CAGR: {calculate_cagr(mom_curve) * 100:.2f}%")
+    
+    print(f"\nBuy & Hold Sharpe: {calculate_sharpe(bh_curve):.2f}")
+    print(f"SMA Crossover Sharpe: {calculate_sharpe(sma_curve):.2f}")
+    print(f"RSI Mean-Reversion Sharpe: {calculate_sharpe(rsi_curve):.2f}")
+    print(f"Momentum Breakout Sharpe: {calculate_sharpe(mom_curve):.2f}")
 
 
     
