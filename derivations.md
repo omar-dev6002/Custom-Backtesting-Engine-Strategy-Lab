@@ -268,3 +268,59 @@ $$20{,}000 = 10{,}000 \times (1+r)^2 \implies r \approx 41.4\%$$
 That's exactly where CAGR's `1/year` comes from — for 2 years, we undo the squaring with the square root.
 
 This maps directly to `engine/metrics.py`: `to_returns_series()` implements the daily-return formula via `.pct_change()`, and `calculate_cagr()` implements this exact formula, with `years` computed from the actual date span of the equity curve.
+
+
+
+
+## Day 12 — Sharpe ratio
+
+![Day 12 notes part 1](notes/day12_1_sharpe_concept.jpg)
+
+1. Lets us compare return and risk together — arguably the single most important number in our project.
+2. Core idea:
+   (i) 2 strategies can have the same returns, but one might get there by climbing steadily while the other swings wildly up and down along the way.
+   (ii) SR asks "How much return did we earn, per unit of risk (volatility) taken to get it?"
+   (iii) Formula for SR:
+
+$$SR = \frac{\text{Mean daily return} - \text{Risk free rate}}{\text{Standard deviation of daily returns}} \times \sqrt{252}$$
+
+Here:
+- **Mean daily return** — the average of our daily returns (`to_return_series()`).
+- **Risk free rate** — the return we'd get doing nothing risky at all (e.g. gov. T-bill). This is used to know "did I make money beyond what I'd get for taking zero risk."
+- **Standard deviation of daily returns** — this is the "risk" part: how much our daily returns bounce around their own average. A strategy with wild day-to-day swings has high standard deviation.
+
+![Day 12 notes part 2](notes/day12_2_sharpe_example.jpg)
+
+`√252` — this converts daily Sharpe ratio into an annualized one (as 252 is standard no. of trading days in a year). We use `√` because variance scales linearly with time but standard deviation scales with its square root.
+
+**Rule of thumb:** Sharpe > 1 — decent. Sharpe > 2 — very good. Sharpe < 0 — better if doing nothing at all.
+
+**Example:** 5-day daily returns: +1%, −0.5%, +2%, +0.5%, −1%
+
+Mean of daily return = (0.01 + (−0.005) + (0.02) + (0.005) − (0.01)) / 5 = 0.4%
+
+Standard deviation from mean:
+
+| Return | Deviation from mean | Squared |
+|---|---|---|
+| 1% | 0.6% | (0.6/100)² |
+| −0.5% | −0.9% | (0.9/100)² |
+| 2.0% | 1.6% | (1.6/100)² |
+| 0.5% | 0.1% | (0.1/100)² |
+| −1.0% | −1.4% | (1.4/100)² |
+
+Sum of S.D = 0.00057
+
+![Day 12 notes part 3](notes/day12_3_sharpe_calc.jpg)
+
+Divide by n−1 = 4 → 0.0001425 (simple standard deviation). On taking square root → std ≈ 1.19%.
+
+We will use `.std()` for this in our code.
+
+Now,
+
+$$\text{daily Sharpe} = \frac{0.004 - 0}{0.0119} \times \sqrt{252} \approx 5.33$$
+
+(we have taken risk-free rate = 0, for simplicity)
+
+This maps directly to `engine/metrics.py`: `calculate_sharpe()` implements exactly this — `daily_returns.mean()` and `daily_returns.std()` from `to_return_series()`, subtracting the risk-free rate (0), then multiplying by `np.sqrt(252)` to annualize.day12_3_sharpe_calc
