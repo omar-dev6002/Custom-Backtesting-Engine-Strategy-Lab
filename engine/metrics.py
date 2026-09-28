@@ -59,3 +59,21 @@ def calculate_sharpe(equity_curve, risk_free_rate: float = 0.0) -> float:
 
     return sharpe_daily * np.sqrt(252)
 
+
+def calculate_sortino(equity_curve, target: float = 0.0):
+    """
+        Like Sharpe, but only downside moves count as risk. target is the
+        daily return below which a day counts as "bad" (0 = any losing day).
+    """
+    daily_returns = to_return_series(equity_curve)
+
+    # winning days become 0 here, so only shortfalls below target survive
+    shortfall = np.minimum(0, daily_returns - target)
+    downside_dev = np.sqrt((shortfall ** 2).mean())
+
+    if downside_dev == 0 or len(daily_returns) < 2:
+        return 0.0
+    
+    sortino_daily = (daily_returns.mean() - target) / downside_dev
+    return sortino_daily * np.sqrt(252)
+

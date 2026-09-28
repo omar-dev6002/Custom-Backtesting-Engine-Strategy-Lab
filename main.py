@@ -12,6 +12,7 @@ from strategies import momentum_breakout
 
 from engine.metrics import calculate_cagr
 from engine.metrics import calculate_sharpe
+from engine.metrics import calculate_sortino
 
 
 
@@ -26,7 +27,7 @@ if __name__ == "__main__":
         price_data= price_data, ticker= TICKER, strategy_fn= generate_signal, starting_cash= 10000, commission= 1.0, slippage_pct=0.001,
     )
 
-    print(f"BUY & HOLD final value: ${bh_curve[-1]['Total Value']:.2f} ({len(bh_portfolio.trade_log)} trades)")
+    print(f"\nBUY & HOLD final value: ${bh_curve[-1]['Total Value']:.2f} ({len(bh_portfolio.trade_log)} trades)")
     
 
     # SMA
@@ -61,6 +62,11 @@ if __name__ == "__main__":
     print(f"SMA Crossover Sharpe: {calculate_sharpe(sma_curve):.2f}")
     print(f"RSI Mean-Reversion Sharpe: {calculate_sharpe(rsi_curve):.2f}")
     print(f"Momentum Breakout Sharpe: {calculate_sharpe(mom_curve):.2f}")
+    
+    print(f"\nBuy & Hold Sortino: {calculate_sortino(bh_curve):.2f}")
+    print(f"SMA Crossover Sortino: {calculate_sortino(sma_curve):.2f}")
+    print(f"RSI Mean-Reversion Sortino: {calculate_sortino(rsi_curve):.2f}")
+    print(f"Momentum Breakout Sortino: {calculate_sortino(mom_curve):.2f}")
 
 
     
