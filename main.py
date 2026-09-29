@@ -15,6 +15,8 @@ from engine.metrics import calculate_sharpe
 from engine.metrics import calculate_sortino
 from engine.metrics import calculate_max_drawdown
 
+from engine.walk_forward import run_walk_forward
+
 
 
 TICKER = "AAPL"
@@ -75,4 +77,20 @@ if __name__ == "__main__":
     print(f"Momentum Breakout Drawdown: {calculate_max_drawdown(mom_curve) * 100:.2f}")
 
 
+    print("\n--- Walk-Forward Validation (2020-2023, yearly windows) ---")
+    multi_year_data = get_price_data(TICKER, start="2020-01-01", end="2024-01-01")
+
+    strategies = {
+        "Buy & Hold": (generate_signal, None),
+        "SMA Crossover": (sma_crossover.generate_signal, sma_crossover.prepare),
+        "RSI Mean-Reversion" : (rsi_strategy.generate_signal, rsi_strategy.prepare),
+        "Momentum Breakout" : (momentum_breakout.generate_signal, momentum_breakout.prepare),
+    }
+
+    wf_results = run_walk_forward(multi_year_data, TICKER, strategies)
+
+    wf_df = pd.DataFrame(wf_results)
+    print(wf_df.to_string(index=False))
+
+    
     

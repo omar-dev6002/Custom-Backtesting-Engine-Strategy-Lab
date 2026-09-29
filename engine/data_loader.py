@@ -23,7 +23,7 @@ def get_price_data(ticker: str, start : str, end: str) -> pd.DataFrame:
     """
     os.makedirs(DATA_DIR, exist_ok = True)  # Ensure the data directory exists
 
-    cache_path = os.path.join(DATA_DIR, f"{ticker}.csv")
+    cache_path = os.path.join(DATA_DIR, f"{ticker}_{start}_{end}.csv")
 
     if os.path.exists(cache_path):
         df = pd.read_csv(cache_path, index_col = 0, parse_dates = True)
