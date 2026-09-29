@@ -77,3 +77,18 @@ def calculate_sortino(equity_curve, target: float = 0.0):
     sortino_daily = (daily_returns.mean() - target) / downside_dev
     return sortino_daily * np.sqrt(252)
 
+def calculate_max_drawdown(equity_curve):
+    """
+        Largest peak-to-trough decline in portfolio value, as a negative
+        percentage. -0.20 means the portfolio was, at its worst point,
+        20% below its highest value seen so far.
+    """
+
+    df = pd.DataFrame(equity_curve).set_index("Date")
+    values = df["Total Value"]
+
+    running_max = values.cummax()       # .cummax() — "cumulative max." - instead of a sliding window, it looks at everything from the start up to this row and keeps the highest value seen so far.
+
+    drawdown = (values - running_max) / running_max
+
+    return drawdown.min()

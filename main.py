@@ -13,6 +13,7 @@ from strategies import momentum_breakout
 from engine.metrics import calculate_cagr
 from engine.metrics import calculate_sharpe
 from engine.metrics import calculate_sortino
+from engine.metrics import calculate_max_drawdown
 
 
 
@@ -67,6 +68,11 @@ if __name__ == "__main__":
     print(f"SMA Crossover Sortino: {calculate_sortino(sma_curve):.2f}")
     print(f"RSI Mean-Reversion Sortino: {calculate_sortino(rsi_curve):.2f}")
     print(f"Momentum Breakout Sortino: {calculate_sortino(mom_curve):.2f}")
+    
+    print(f"\nBuy & Hold Drawdown: {calculate_max_drawdown(bh_curve) * 100:.2f}")
+    print(f"SMA Crossover Drawdown: {calculate_max_drawdown(sma_curve) * 100:.2f}")
+    print(f"RSI Mean-Reversion Drawdown: {calculate_max_drawdown(rsi_curve) * 100:.2f}")
+    print(f"Momentum Breakout Drawdown: {calculate_max_drawdown(mom_curve) * 100:.2f}")
 
 
     
