@@ -17,6 +17,7 @@ from engine.metrics import calculate_max_drawdown
 
 from engine.walk_forward import run_walk_forward
 
+from engine.dashboard import plot_comparison
 
 
 TICKER = "AAPL"
@@ -91,6 +92,22 @@ if __name__ == "__main__":
 
     wf_df = pd.DataFrame(wf_results)
     print(wf_df.to_string(index=False))
+
+    curves = {
+        "Buy & Hold": bh_curve,
+        "SMA Crossover": sma_curve,
+        "RSI Mean-Reversion": rsi_curve,
+        "Momentum Breakout": mom_curve,
+    }
+
+    metrics = {
+        "Buy & Hold": {"Sharpe": calculate_sharpe(bh_curve)},
+        "SMA Crossover": {"Sharpe": calculate_sharpe(sma_curve)},
+        "RSI Mean-Reversion": {"Sharpe": calculate_sharpe(rsi_curve)},
+        "Momentum Breakout": {"Sharpe": calculate_sharpe(mom_curve)},
+    }
+
+    plot_comparison(curves, metrics, output_path="dashboard.png")
 
     
     
