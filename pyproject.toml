@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "backtest-engine"
+version = "0.1.0"
+description = "A from-scratch Python backtesting engine with strategy comparison and risk metrics"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "numpy",
+    "yfinance",
+    "matplotlib",
+]
+
+[tool.setuptools]
+packages = ["engine", "strategies"]
+
