@@ -3,4 +3,4 @@ data/
 __pycache__/
 *.pyc
 .env
-
+backtest_engine.egg-info/

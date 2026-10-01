@@ -6,7 +6,7 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 3 complete (full risk-metric suite, walk-forward validation). Week 4 started: comparison dashboard done. Packaging, unit tests, and final write-up remaining.
+Week 3 complete (full risk-metric suite, walk-forward validation). Week 4 in progress: comparison dashboard done, now packaged as an installable module. Unit tests, final README polish, and public write-up remaining.
 
 ## Main finding: no strategy wins in every regime
 
@@ -27,8 +27,6 @@ Everything through Day 14 was tested on a single year (AAPL, 2023 — a strong, 
 
 ![Strategy comparison dashboard](dashboard.png)
 
-The overlaid equity curves make the story visible directly: Buy & Hold's climb is the smoothest and highest, but the flat stretches in the other three lines show exactly when each strategy sat entirely in cash between trades — a direct visual confirmation that the "cash when not holding" logic is working as intended, not just something the numbers claim.
-
 ## Full single-year results (AAPL, 2023, for reference)
 
 $10,000 starting cash, $1 commission/trade, 0.1% slippage/trade, 25% position sizing.
@@ -42,7 +40,7 @@ $10,000 starting cash, $1 commission/trade, 0.1% slippage/trade, 25% position si
 
 ## What's built so far
 
-- **`engine/data_loader.py`** — pulls daily OHLCV data via `yfinance`, caches it locally as CSV, filename keyed to ticker AND date range (fixed after a real bug where a stale single-year cache got silently reused for a 4-year walk-forward request).
+- **`engine/data_loader.py`** — pulls daily OHLCV data via `yfinance`, caches it locally as CSV, filename keyed to ticker AND date range.
 - **`engine/order.py`** — validated trade instruction (dataclass).
 - **`engine/portfolio.py`** — cash, positions, trade log, and total value tracking.
 - **`engine/broker.py`** — validates and executes orders, models slippage alongside a flat commission.
@@ -50,10 +48,11 @@ $10,000 starting cash, $1 commission/trade, 0.1% slippage/trade, 25% position si
 - **`engine/position_sizing.py`** — caps each trade to a fixed percentage of available cash.
 - **`engine/metrics.py`** — `to_return_series()`, `calculate_cagr()`, `calculate_sharpe()`, `calculate_sortino()`, `calculate_max_drawdown()`.
 - **`engine/walk_forward.py`** — splits multi-year price data into yearly windows and runs every strategy on every window independently.
-- **`engine/dashboard.py`** — overlaid equity curve chart plus a Sharpe ratio bar chart, comparing all strategies visually in one figure.
+- **`engine/dashboard.py`** — overlaid equity curve chart plus a Sharpe ratio bar chart.
 - **`strategies/buy_and_hold.py`**, **`sma_crossover.py`**, **`rsi_strategy.py`**, **`momentum_breakout.py`** — 4 strategies, all using shared position sizing.
+- **`pyproject.toml`** — packages `engine/` and `strategies/` as an installable module (`pip install -e .`). Verified importable from outside the project folder, in a fresh shell, with only the venv activated — the actual test of whether packaging worked, not just that the install command succeeded.
 
-Bugs hit and fixed across sessions: multiple typos, a missing `()` on `.pct_change`, a stray autocomplete import, a 0-byte unsaved file, a dict key naming mismatch, and a cache-collision bug caught because walk-forward output silently returned only one year instead of four.
+Bugs hit and fixed across sessions: multiple typos, a missing `()` on `.pct_change`, a stray autocomplete import, a 0-byte unsaved file, a dict key naming mismatch, a cache-collision bug, and an early false alarm during packaging testing where importing from outside the venv (rather than outside the project folder) failed for an unrelated, expected reason — worth remembering that a venv's installed packages, including editable ones, are invisible outside that specific venv.
 
 ## Tickers
 
@@ -66,6 +65,11 @@ python -m venv venv
 venv\Scripts\Activate.ps1   # Windows
 pip install -r requirements.txt
 python main.py
+```
+
+To use this engine in another project (editable install — local code changes take effect immediately, no reinstalling):
+```bash
+pip install -e .
 ```
 
 ## Notes and derivations
@@ -85,9 +89,9 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 - Single-asset backtests only — no portfolio-level diversification
 - Only one ticker (AAPL) tested across the 4 walk-forward years
 - RSI uses simple rolling averages, not Wilder's exponential smoothing
-- No unit tests yet — planned for Week 4
-- Not yet packaged as a reusable/installable module
+- No unit tests yet — planned next
 - The event loop is *designed* to avoid lookahead bias but hasn't been actively tested against it
+- `requirements.txt` and `pyproject.toml` currently list the same dependencies in two places, kept in sync manually rather than consolidated
 
 ## Roadmap
 
@@ -95,5 +99,6 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 - **Week 2** ✅ complete — SMA crossover, RSI mean-reversion, momentum breakout, slippage modeling, position sizing
 - **Week 3** ✅ complete — CAGR, Sharpe, Sortino, max drawdown, walk-forward validation. Main finding: no strategy dominates across all market regimes
 - **Week 4** (current):
-  - Day 16 ✅ — comparison dashboard (equity curves + Sharpe bar chart)
-  - Remaining: package as installable module, unit tests, README limitations section (lookahead/survivorship bias), public write-up
+  - Day 16 ✅ — comparison dashboard
+  - Day 17 ✅ — packaged as an installable module, verified from outside the project
+  - Remaining: unit tests, README limitations section (lookahead/survivorship bias), public write-up
