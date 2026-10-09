@@ -6,7 +6,7 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 3 complete (full risk-metric suite, walk-forward validation). Week 4 in progress: comparison dashboard done, now packaged as an installable module. Unit tests, final README polish, and public write-up remaining.
+Week 3 complete (full risk-metric suite, walk-forward validation). Week 4 in progress: comparison dashboard, packaging, and unit tests for the metrics module are done. The lookahead/survivorship bias write-up in this README and the public write-up remain.
 
 ## Main finding: no strategy wins in every regime
 
@@ -50,9 +50,10 @@ $10,000 starting cash, $1 commission/trade, 0.1% slippage/trade, 25% position si
 - **`engine/walk_forward.py`** — splits multi-year price data into yearly windows and runs every strategy on every window independently.
 - **`engine/dashboard.py`** — overlaid equity curve chart plus a Sharpe ratio bar chart.
 - **`strategies/buy_and_hold.py`**, **`sma_crossover.py`**, **`rsi_strategy.py`**, **`momentum_breakout.py`** — 4 strategies, all using shared position sizing.
-- **`pyproject.toml`** — packages `engine/` and `strategies/` as an installable module (`pip install -e .`). Verified importable from outside the project folder, in a fresh shell, with only the venv activated — the actual test of whether packaging worked, not just that the install command succeeded.
+- **`tests/test_metrics.py`** — 5 pytest tests for the metrics module. Four check the functions against the hand-worked examples in `derivations.md` (CAGR, Sharpe, Sortino, max drawdown); one is an edge case (a strategy that only goes up has exactly 0 drawdown). Tolerances are deliberately loose because the hand calculations were rounded, so a very small error, like using 250 instead of 252 trading days, would not be caught. Run with `python -m pytest`.
+- **`pyproject.toml`** — packages `engine/` and `strategies/` as an installable module (`pip install -e .`). Verified importable from outside the project folder with the venv active.
 
-Bugs hit and fixed across sessions: multiple typos, a missing `()` on `.pct_change`, a stray autocomplete import, a 0-byte unsaved file, a dict key naming mismatch, a cache-collision bug, and an early false alarm during packaging testing where importing from outside the venv (rather than outside the project folder) failed for an unrelated, expected reason — worth remembering that a venv's installed packages, including editable ones, are invisible outside that specific venv.
+Bugs hit and fixed across sessions: multiple typos, a missing `()` on `.pct_change`, a stray autocomplete import, a 0-byte unsaved file, a dict key naming mismatch, a cache-collision bug, and two separate environment problems while setting up tests. The `tests/` folder was missing its `__init__.py`, so pytest couldn't see the `engine` package, and `pytest` had been installed into the system Python rather than the venv. Using `python -m pip` and `python -m pytest` instead of bare `pip` and `pytest` avoids the second one.
 
 ## Tickers
 
@@ -72,6 +73,12 @@ To use this engine in another project (editable install — local code changes t
 pip install -e .
 ```
 
+To run the tests:
+```bash
+python -m pip install pytest
+python -m pytest
+```
+
 ## Notes and derivations
 
 `derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, RSI, breakout `.shift(1)` reasoning, slippage, position sizing, CAGR, Sharpe, Sortino) paired with typed explanations, day by day.
@@ -89,9 +96,9 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 - Single-asset backtests only — no portfolio-level diversification
 - Only one ticker (AAPL) tested across the 4 walk-forward years
 - RSI uses simple rolling averages, not Wilder's exponential smoothing
-- No unit tests yet — planned next
+- Unit tests cover only `metrics.py`; the broker, portfolio, position sizing, and strategies have no automated tests, and nothing tests for lookahead bias
 - The event loop is *designed* to avoid lookahead bias but hasn't been actively tested against it
-- `requirements.txt` and `pyproject.toml` currently list the same dependencies in two places, kept in sync manually rather than consolidated
+- `requirements.txt` and `pyproject.toml` list the same dependencies in two places, kept in sync manually
 
 ## Roadmap
 
@@ -100,5 +107,6 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 - **Week 3** ✅ complete — CAGR, Sharpe, Sortino, max drawdown, walk-forward validation. Main finding: no strategy dominates across all market regimes
 - **Week 4** (current):
   - Day 16 ✅ — comparison dashboard
-  - Day 17 ✅ — packaged as an installable module, verified from outside the project
-  - Remaining: unit tests, README limitations section (lookahead/survivorship bias), public write-up
+  - Day 17 ✅ — packaged as an installable module
+  - Day 18 ✅ — unit tests for the metrics module
+  - Remaining: README section on lookahead/survivorship bias, public write-up
