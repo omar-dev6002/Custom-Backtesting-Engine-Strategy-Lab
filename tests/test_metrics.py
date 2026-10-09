@@ -33,7 +33,7 @@ def test_sharpe_matches_hand_calculation():
     curve = make_equity_curve(values)
 
     sharpe = calculate_sharpe(curve)
-    assert sharpe == pytest.approx(5.33, rel=0.02)
+    assert sharpe == pytest.approx(5.3193, rel=0.001)
 
 
 def test_sortino_matches_hand_calculation():
@@ -42,7 +42,7 @@ def test_sortino_matches_hand_calculation():
     curve = make_equity_curve(values)
 
     sortino = calculate_sortino(curve)
-    assert sortino == pytest.approx(12.70, rel=0.02)
+    assert sortino == pytest.approx(12.6996, rel=0.001)
 
 
 def test_max_drawdown_matches_hand_calculation():
