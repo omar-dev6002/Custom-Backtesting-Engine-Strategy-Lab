@@ -14,8 +14,10 @@ from engine.metrics import calculate_cagr
 from engine.metrics import calculate_sharpe
 from engine.metrics import calculate_sortino
 from engine.metrics import calculate_max_drawdown
+from engine.metrics import calculate_win_rate
 
-from engine.walk_forward import run_walk_forward
+
+from engine.walk_forward import run_walk_forward, split_by_year
 
 from engine.dashboard import plot_comparison
 
@@ -24,7 +26,6 @@ TICKER = "AAPL"
 
 if __name__ == "__main__":
     price_data = get_price_data(TICKER, start = "2023-01-01", end = "2024-01-01")
-
 
     # BL
     bh_curve, bh_portfolio = run_backtest(
@@ -81,6 +82,14 @@ if __name__ == "__main__":
     print("\n--- Walk-Forward Validation (2020-2023, yearly windows) ---")
     multi_year_data = get_price_data(TICKER, start="2020-01-01", end="2024-01-01")
 
+    print()
+    for name, pf in [("Buy & Hold", bh_portfolio), ("SMA Crossover", sma_portfolio),
+                     ("RSI Mean-Reversion", rsi_portfolio), ("Momentum Breakout", mom_portfolio)]:
+        wr = calculate_win_rate(pf.trade_log)
+        wr_text = "N/A (no closed trades)" if wr is None else f"{wr * 100:.1f}%"
+        print(f"{name} Win Rate: {wr_text}")
+
+    
     strategies = {
         "Buy & Hold": (generate_signal, None),
         "SMA Crossover": (sma_crossover.generate_signal, sma_crossover.prepare),
@@ -92,6 +101,15 @@ if __name__ == "__main__":
 
     wf_df = pd.DataFrame(wf_results)
     print(wf_df.to_string(index=False))
+
+    # temporary check: why do SMA and RSI share the same 2020 drawdown? delete after
+    window_2020 = split_by_year(multi_year_data)[2020]
+    for name in ("SMA Crossover", "RSI Mean-Reversion"):
+        fn, prep = strategies[name]
+        _, pf = run_backtest(window_2020, TICKER, fn, prepare_fn=prep, slippage_pct=0.001)
+        print(f"\n{name} 2020 trades:")
+        for t in pf.trade_log:
+            print(" ", t["Date"].date(), t["Side"], t["Quantity"], round(t["Fill price"], 2))
 
     curves = {
         "Buy & Hold": bh_curve,
@@ -108,6 +126,3 @@ if __name__ == "__main__":
     }
 
     plot_comparison(curves, metrics, output_path="dashboard.png")
-
-    
-    

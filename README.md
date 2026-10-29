@@ -6,58 +6,73 @@ This is part of a 5-project, 5-month portfolio. Project 1 was a neural network f
 
 ## Status
 
-Week 3 complete (full risk-metric suite, walk-forward validation). Week 4 in progress: comparison dashboard, packaging, and unit tests for the metrics module are done. The lookahead/survivorship bias write-up in this README and the public write-up remain.
+Engine, four strategies, risk metrics (CAGR, Sharpe, Sortino, max drawdown, win rate), walk-forward testing, a comparison dashboard, packaging, and unit tests for the metrics are done. Still to do: testing on more than one ticker, tests for lookahead bias, a section on bias in this README, and a public write-up.
 
-## Main finding: no strategy wins in every regime
+## A correction
 
-Everything through Day 14 was tested on a single year (AAPL, 2023 — a strong, steady uptrend), and in that one year, Buy & Hold beat every active strategy on every metric. Extending the test to 2020–2023 changes the conclusion substantially:
+Until Day 21, the SMA Crossover strategy was running with the wrong parameters. Its `prepare()` function had `slow_window` defaulting to 10 instead of 50, so the "slow" average was shorter than the "fast" one and the strategy was buying when price weakened and selling when it strengthened, close to the opposite of the trend-following rule it was supposed to be. Every SMA number published here before that, and several conclusions built on them, were wrong.
 
-| Year | Regime | Best CAGR | Best Sharpe | Notable |
-|---|---|---|---|---|
-| 2020 | COVID crash + sharp recovery | Buy & Hold (19.3%) | Momentum Breakout (1.46) — nearly tied | Momentum genuinely competitive in a volatile, sharply-trending year |
-| 2021 | Continued uptrend, high volatility | Buy & Hold (9.2%) | **Momentum Breakout (1.74)** | Momentum beats Buy & Hold on a risk-adjusted basis |
-| 2022 | Bear market | Every strategy lost money | **SMA Crossover (−0.06, least negative)** | SMA lost far less than Buy & Hold — real downside protection |
-| 2023 | Steady, low-volatility uptrend | Buy & Hold (13.7%) | Buy & Hold (2.13) | Matches the single-year result from Days 11–14 |
+I found it because two strategies traded on the same day in 2020, and because SMA bought on a date when a 50-day average couldn't exist yet. After fixing the default I added a check that rejects `fast_window >= slow_window`. These were retracted:
 
-**No single strategy wins across all four years.** Buy & Hold's advantage is specific to steady, low-volatility uptrends. Momentum Breakout is strong in volatile, sharply-trending conditions despite being the weakest strategy in the 2023-only comparison. SMA Crossover's small drawdown in the single-year test becomes a real advantage in an actual down year, where every other strategy lost more.
+- "SMA is nearly as risk-efficient as Buy & Hold" and "SMA edges Buy & Hold on Sortino" (the corrected SMA is well behind in 2023).
+- "SMA gave real downside protection in 2022" (the corrected SMA had the worst Sharpe of the four that year).
 
-**Known limitation of the walk-forward test:** each yearly window runs independently, starting fresh — a strategy needing indicator history (SMA's 50-day window especially) loses signal capability for the first stretch of *every* year. This likely slightly understates strategies with longer lookback windows.
+Buy & Hold, RSI, and Momentum results were unaffected, since they don't use that file. The lesson I'm taking from it: results tables should not carry parameters typed by hand, and a parameter default is worth a test.
 
-## Comparison dashboard (AAPL, 2023)
+## Results
+
+AAPL, $10,000 starting cash, $1 commission per trade, 0.1% slippage, 25% position sizing. SMA Crossover uses 20/50-day windows. RSI and Momentum use the defaults in their strategy files.
+
+### 2023 only
+
+| Strategy | Final Value | CAGR | Sharpe | Sortino | Max Drawdown | Trades | Win Rate |
+|---|---|---|---|---|---|---|---|
+| Buy & Hold | $11,343.23 | 13.68% | 2.13 | 3.31 | −5.07% | 1 | n/a |
+| SMA Crossover | $10,061.97 | 0.63% | 0.59 | 0.99 | −0.71% | 1 | n/a |
+| RSI Mean-Reversion | $10,263.94 | 2.68% | 1.25 | 1.92 | −1.87% | 4 | 100% (2 of 2) |
+| Momentum Breakout | $10,232.34 | 2.36% | 0.56 | 0.83 | −5.99% | 7 | 33% (1 of 3) |
+
+Win rate counts only closed round trips (a buy followed by its sell). Buy & Hold never sells, and SMA bought once in 2023 and never sold, so neither has a win rate.
 
 ![Strategy comparison dashboard](dashboard.png)
 
-## Full single-year results (AAPL, 2023, for reference)
+### Walk-forward, 2020–2023 (each year run independently)
 
-$10,000 starting cash, $1 commission/trade, 0.1% slippage/trade, 25% position sizing.
+CAGR / Sharpe per year:
 
-| Strategy | Final Value | CAGR | Sharpe | Sortino | Max Drawdown | Trades |
-|---|---|---|---|---|---|---|
-| Buy & Hold | $11,343.23 | 13.68% | 2.13 | 3.31 | −5.07% | 1 |
-| SMA Crossover (20/50) | $10,488.97 | 4.96% | 2.03 | 3.50 | −1.16% | 8 |
-| RSI Mean-Reversion (14, 30/70) | $10,263.94 | 2.68% | 1.25 | 1.92 | −1.87% | 4 |
-| Momentum Breakout (20-day) | $10,232.34 | 2.36% | 0.56 | 0.83 | −5.99% | 7 |
+| Year | Buy & Hold | SMA Crossover | RSI Mean-Reversion | Momentum Breakout |
+|---|---|---|---|---|
+| 2020 | 19.3% / 1.45 | 16.7% / **1.84** | 0.1% / 0.05 | 13.0% / 1.46 |
+| 2021 | 9.2% / 1.41 | 4.1% / 0.95 | 2.1% / 0.59 | 7.9% / **1.74** |
+| 2022 | −7.1% / −0.91 | −5.8% / −1.38 | −5.0% / **−0.62** | −4.6% / −1.06 |
+| 2023 | 13.7% / **2.13** | 0.6% / 0.59 | 2.7% / 1.25 | 2.4% / 0.56 |
 
-## What's built so far
+Bold marks the best Sharpe each year. Trades per year: Buy & Hold 1, 1, 1, 1; SMA 3, 5, 8, 1; RSI 4, 6, 5, 4; Momentum 7, 5, 8, 7.
 
-- **`engine/data_loader.py`** — pulls daily OHLCV data via `yfinance`, caches it locally as CSV, filename keyed to ticker AND date range.
-- **`engine/order.py`** — validated trade instruction (dataclass).
-- **`engine/portfolio.py`** — cash, positions, trade log, and total value tracking.
-- **`engine/broker.py`** — validates and executes orders, models slippage alongside a flat commission.
-- **`engine/backtester.py`** — the event loop, with a `prepare_fn` hook for indicators and a `slippage_pct` parameter.
-- **`engine/position_sizing.py`** — caps each trade to a fixed percentage of available cash.
-- **`engine/metrics.py`** — `to_return_series()`, `calculate_cagr()`, `calculate_sharpe()`, `calculate_sortino()`, `calculate_max_drawdown()`.
-- **`engine/walk_forward.py`** — splits multi-year price data into yearly windows and runs every strategy on every window independently.
-- **`engine/dashboard.py`** — overlaid equity curve chart plus a Sharpe ratio bar chart.
-- **`strategies/buy_and_hold.py`**, **`sma_crossover.py`**, **`rsi_strategy.py`**, **`momentum_breakout.py`** — 4 strategies, all using shared position sizing.
-- **`tests/test_metrics.py`** — 5 pytest tests for the metrics module. Four check the functions against the hand-worked examples in `derivations.md` (CAGR, Sharpe, Sortino, max drawdown); one is an edge case (a strategy that only goes up has exactly 0 drawdown). The Sharpe and Sortino tests compare against full-precision values rather than the rounded hand answers, with a 0.1% tolerance. An earlier 2% tolerance let a deliberate 250-vs-252 trading-days error pass, so I tightened it and confirmed the tests fail on that error. Run with `python -m pytest`.
-- **`pyproject.toml`** — packages `engine/` and `strategies/` as an installable module (`pip install -e .`). Verified importable from outside the project folder with the venv active.
+What this does and doesn't show:
 
-Bugs hit and fixed across sessions: multiple typos, a missing `()` on `.pct_change`, a stray autocomplete import, a 0-byte unsaved file, a dict key naming mismatch, a cache-collision bug, and two separate environment problems while setting up tests. The `tests/` folder was missing its `__init__.py`, so pytest couldn't see the `engine` package, and `pytest` had been installed into the system Python rather than the venv. Using `python -m pip` and `python -m pytest` instead of bare `pip` and `pytest` avoids the second one.
+- Buy & Hold has the best CAGR in 2020, 2021, and 2023. In 2022 all four strategies lost money, and Momentum lost the least.
+- The best Sharpe goes to a different strategy every year. That looks like regime dependence, but each strategy closes only 1 to 5 round trips a year, so four different winners is also what chance would produce. Suggestive, not established.
+- SMA's good 2020 is a single winning round trip. Its 50-day warm-up kept it out of the market through the February–March crash, which helped it by accident, not by foresight.
+- Momentum's 2020 and 2021 are its strongest years and 2023 its weakest.
+
+**Walk-forward limitation:** each yearly window starts fresh, so a strategy that needs indicator history loses its first stretch of signals every year. SMA, with its 50-day window, is hit hardest, and this likely understates it.
+
+## What's built
+
+- **`engine/data_loader.py`** — daily OHLCV from `yfinance`, cached as CSV, filename keyed to ticker and date range.
+- **`engine/order.py`**, **`portfolio.py`**, **`broker.py`** — validated orders, cash and position tracking, execution with a flat commission and percentage slippage.
+- **`engine/backtester.py`** — the event loop, with a `prepare_fn` hook for indicators.
+- **`engine/position_sizing.py`** — caps each trade to a fixed share of available cash.
+- **`engine/metrics.py`** — daily returns, CAGR, Sharpe, Sortino, max drawdown, and win rate. Win rate returns `None` when nothing has closed.
+- **`engine/walk_forward.py`**, **`engine/dashboard.py`** — yearly-window testing and the comparison chart.
+- **`strategies/`** — buy-and-hold, SMA crossover, RSI mean-reversion, momentum breakout.
+- **`tests/test_metrics.py`** — 9 tests: the Sharpe, Sortino, CAGR, and drawdown functions against hand-worked examples, and win rate against a hand-worked three-trade example plus edge cases. The Sharpe and Sortino tolerances are 0.1%, tightened after a deliberate 250-vs-252 trading-days error got through at 2%. These do not test the strategies.
+- **`pyproject.toml`** — installable with `pip install -e .`.
 
 ## Tickers
 
-SPY, AAPL, MSFT, GOOGL, JPM planned. So far AAPL is the only one actually tested, across 2020–2023.
+SPY, AAPL, MSFT, GOOGL, JPM were planned. Only AAPL has been tested so far.
 
 ## Setup
 
@@ -68,12 +83,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
-To use this engine in another project (editable install — local code changes take effect immediately, no reinstalling):
+To use the engine from another project (editable install):
 ```bash
 pip install -e .
 ```
 
-To run the tests:
+To run the tests (use `python -m`, so the venv's pytest is the one that runs):
 ```bash
 python -m pip install pytest
 python -m pytest
@@ -81,32 +96,25 @@ python -m pytest
 
 ## Notes and derivations
 
-`derivations.md` has photographed handwritten notes (finance terms, hand-worked calculations, architecture design, RSI, breakout `.shift(1)` reasoning, slippage, position sizing, CAGR, Sharpe, Sortino) paired with typed explanations, day by day.
+`derivations.md` has photographed handwritten notes paired with typed explanations, covering finance terms, the architecture, the indicator math, slippage, position sizing, CAGR, and Sharpe. Notes for Sortino, drawdown, and win rate are still to be added.
 
 ## Why build the engine instead of using a library
 
-Most student "algo trading" projects call `backtrader` or `zipline`, plot one equity curve, and call it done. That tests whether you can read documentation, not whether you understand what's happening between a signal and a filled trade — slippage, commissions, position sizing, what happens when you try to sell something you don't hold. Building it myself means I have to make those decisions explicitly instead of inheriting someone else's defaults.
+Most student "algo trading" projects call `backtrader` or `zipline`, plot one equity curve, and call it done. That tests whether you can read documentation, not whether you understand what's happening between a signal and a filled trade. Building it myself means making those decisions explicitly, and, as the correction above shows, being responsible when one of them is wrong.
 
-## Known limitations (will grow as the project does)
+## Known limitations
 
-- Walk-forward windows are independent, not chained — strategies with long lookback periods lose signal capability at the start of every window
-- Sharpe and Sortino use a risk-free rate / target of 0, not a real T-bill rate
-- Position sizing is a fixed percentage of cash, not volatility-based
-- Slippage model is a flat percentage, not dependent on order size or liquidity
-- Single-asset backtests only — no portfolio-level diversification
-- Only one ticker (AAPL) tested across the 4 walk-forward years
-- RSI uses simple rolling averages, not Wilder's exponential smoothing
-- Unit tests cover only `metrics.py`; the broker, portfolio, position sizing, and strategies have no automated tests, and nothing tests for lookahead bias
-- The event loop is *designed* to avoid lookahead bias but hasn't been actively tested against it
-- `requirements.txt` and `pyproject.toml` list the same dependencies in two places, kept in sync manually
+- **Same-bar execution.** A strategy sees today's close and is also filled at today's close. Real trading can't do that: you'd fill at the next open at the earliest. This is a known optimism in every result here. I chose to document it, not change it, so the numbers are unchanged, and the true results are likely somewhat worse, especially for strategies that trade often.
+- **Survivorship bias.** AAPL and the other planned tickers are companies that did well enough to still be household names. Testing on them with hindsight flatters buy-and-hold in particular.
+- **Lookahead bias.** The indicators use only past data by construction (`rolling()` and `shift()`), but there are no automated tests for it yet.
+- One ticker, four years: the regime findings above are too thin to generalize from.
+- Walk-forward windows run independently, not chained.
+- Sharpe and Sortino use a risk-free rate and target of 0.
+- Position sizing is a fixed percentage of cash, not volatility-based. Slippage is a flat percentage.
+- Unit tests cover only the metrics. No tests yet for the broker, portfolio, position sizing, or strategy parameters.
+- `requirements.txt` and `pyproject.toml` list the same dependencies by hand.
 
 ## Roadmap
 
-- **Week 1** ✅ complete — data layer, Order/Portfolio/Broker, event loop, buy-and-hold baseline, equity curve
-- **Week 2** ✅ complete — SMA crossover, RSI mean-reversion, momentum breakout, slippage modeling, position sizing
-- **Week 3** ✅ complete — CAGR, Sharpe, Sortino, max drawdown, walk-forward validation. Main finding: no strategy dominates across all market regimes
-- **Week 4** (current):
-  - Day 16 ✅ — comparison dashboard
-  - Day 17 ✅ — packaged as an installable module
-  - Day 18 ✅ — unit tests for the metrics module
-  - Remaining: README section on lookahead/survivorship bias, public write-up
+- **Weeks 1–3** done: data layer, engine, four strategies, slippage, position sizing, risk metrics, walk-forward.
+- **Week 4**: dashboard, packaging, and metrics tests done. Remaining: a regression test for strategy parameters, lookahead tests, the other four tickers, a README section on bias, and the public write-up.
