@@ -9,11 +9,14 @@ from engine.position_sizing import calculate_shares
 from engine.order import Order
 
 
-def prepare(price_data, fast_window: int = 20, slow_window: int = 10):
+def prepare(price_data, fast_window: int = 20, slow_window: int = 50):
     """
      Adds SMA_fast, SMA_slow, and precomputed crossover signal columns
      to price_data. Called once before the backtest loop starts.
     """  
+
+    if fast_window >= slow_window:
+        raise ValueError(f"fast_window ({fast_window}) must be smaller than slow_window ({slow_window})")
 
     df = price_data.copy()
 
