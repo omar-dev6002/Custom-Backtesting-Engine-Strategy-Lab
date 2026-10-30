@@ -34,3 +34,20 @@ def test_sma_cannot_signal_before_the_slow_average_exists():
 def test_sma_rejects_a_fast_window_that_is_not_smaller():
     with pytest.raises(ValueError):
         sma_crossover.prepare(make_prices(), fast_window=20, slow_window=10)
+
+
+from strategies import rsi_strategy, momentum_breakout
+
+
+def test_rsi_default_period_and_thresholds():
+    import inspect
+    defaults = inspect.signature(rsi_strategy.prepare).parameters
+    assert defaults["period"].default == 14
+    assert defaults["oversold"].default == 30
+    assert defaults["overbought"].default == 70
+
+
+def test_momentum_default_window():
+    import inspect
+    defaults = inspect.signature(momentum_breakout.prepare).parameters
+    assert defaults["window"].default == 20
