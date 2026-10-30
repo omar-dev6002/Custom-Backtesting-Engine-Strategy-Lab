@@ -126,3 +126,20 @@ if __name__ == "__main__":
     }
 
     plot_comparison(curves, metrics, output_path="dashboard.png")
+
+    print("\n--- Multi-Ticker Walk-Forward (2020-2023) ---")
+    all_tickers = ["SPY", "AAPL", "MSFT", "GOOGL", "JPM"]
+    all_results = []
+
+    for t in all_tickers:
+        t_data = get_price_data(t, start="2020-01-01", end="2024-01-01")
+        t_results = run_walk_forward(t_data, t, strategies)
+        all_results.extend(t_results)
+
+    all_df = pd.DataFrame(all_results)
+    all_df.to_csv("walk_forward_all_tickers.csv", index=False)
+    print(all_df.to_string(index=False))
+
+    print("\n--- Average CAGR and Sharpe by strategy, across all tickers and years ---")
+    summary = all_df.groupby("Strategy")[["CAGR", "Sharpe", "Sortino", "Max Drawdown"]].mean()
+    print(summary)
