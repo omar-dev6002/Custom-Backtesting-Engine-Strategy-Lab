@@ -110,4 +110,4 @@ Most student "algo trading" projects call `backtrader` or `zipline`, plot one eq
 
 - **Weeks 1–3**: data layer, engine, four strategies, slippage, position sizing, risk metrics, walk-forward validation. Complete.
 - **Week 4**: dashboard, packaging, unit tests (metrics, strategy parameters, lookahead bias), the SMA correction, the multi-ticker run, this bias section. Complete.
-- **Remaining**: public write-up.
+  
