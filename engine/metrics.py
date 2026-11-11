@@ -92,3 +92,32 @@ def calculate_max_drawdown(equity_curve):
     drawdown = (values - running_max) / running_max
 
     return drawdown.min()
+
+def calculate_win_rate(trade_log):
+    """
+    Share of closed round trips (a buy followed by the sell that closes it)
+    that made money. None if no round trip has closed, so a strategy that
+    only ever buys (buy-and-hold) isn't reported as 0% or 100%.
+
+    Assumes every sell closes the whole position, true for all current
+    strategies. Partial sells would need proper lot matching.
+    """
+    open_buys = {}  # ticker -> total cost (incl. commission) of the buy waiting for its sell
+    wins = 0
+    closed = 0
+
+    for trade in trade_log:
+        ticker = trade["Ticker"]
+        value = trade["Quantity"] * trade["Fill price"]
+
+        if trade["Side"] == "BUY":
+            open_buys[ticker] = value + trade["Commission"]
+        elif ticker in open_buys:
+            profit = (value - trade["Commission"]) - open_buys.pop(ticker)
+            closed += 1
+            if profit > 0:
+                wins += 1
+
+    if closed == 0:
+        return None
+    return wins / closed

@@ -15,7 +15,7 @@ than hiding.
 
 import pandas as pd
 from engine.backtester import run_backtest
-from engine.metrics import calculate_max_drawdown, calculate_cagr, calculate_sharpe, calculate_sortino
+from engine.metrics import calculate_max_drawdown, calculate_cagr, calculate_sharpe, calculate_sortino, calculate_win_rate
 
 
 def split_by_year(price_data: pd.DataFrame) -> dict:
@@ -57,7 +57,8 @@ def run_walk_forward(price_data: pd.DataFrame, ticker: str, strategies: dict, st
                 "Sharpe" : calculate_sharpe(equity_curve),
                 "Sortino": calculate_sortino(equity_curve),
                 "Max Drawdown" : calculate_max_drawdown(equity_curve),
-                "Trades" : len(portfolio.trade_log)
+                "Trades" : len(portfolio.trade_log),
+                "Win Rate": calculate_win_rate(portfolio.trade_log),
             })
     return results
 

@@ -6,7 +6,7 @@ examples from derivations.md. Run with: pytest
 
 from datetime import datetime, timedelta
 import pytest
-from engine.metrics import calculate_cagr, calculate_sharpe, calculate_sortino, calculate_max_drawdown
+from engine.metrics import calculate_cagr, calculate_sharpe, calculate_sortino, calculate_max_drawdown, calculate_win_rate
 
 
 def make_equity_curve(values, start_date=datetime(2023, 1, 1)):
@@ -61,3 +61,32 @@ def test_max_drawdown_is_zero_when_always_rising():
 
     drawdown = calculate_max_drawdown(curve)
     assert drawdown == 0.0
+
+def make_trade(side, qty, price, commission=1.0, ticker="TEST"):
+    return {"Date": None, "Ticker": ticker, "Side": side, "Quantity": qty,
+            "Fill price": price, "Commission": commission}
+
+
+def test_win_rate_matches_hand_calculation():
+    """Day 20 example: +98, -72, +48 -> 2 wins out of 3 round trips."""
+    log = [
+        make_trade("BUY", 10, 100), make_trade("SELL", 10, 110),
+        make_trade("BUY", 10, 112), make_trade("SELL", 10, 105),
+        make_trade("BUY", 10, 104), make_trade("SELL", 10, 109),
+    ]
+    assert calculate_win_rate(log) == pytest.approx(2 / 3)
+
+
+def test_win_rate_ignores_an_unclosed_position():
+    log = [make_trade("BUY", 10, 100), make_trade("SELL", 10, 110), make_trade("BUY", 10, 120)]
+    assert calculate_win_rate(log) == 1.0
+
+
+def test_win_rate_is_none_when_nothing_closed():
+    """Buy-and-hold only ever buys, so there is no win rate to report."""
+    assert calculate_win_rate([make_trade("BUY", 10, 100)]) is None
+
+
+def test_commission_can_turn_a_small_gain_into_a_loss():
+    log = [make_trade("BUY", 10, 100), make_trade("SELL", 10, 100.1)]
+    assert calculate_win_rate(log) == 0.0
